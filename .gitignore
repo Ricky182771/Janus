@@ -1,0 +1,12 @@
+# Logs & caches
+.cache/
+*.log
+
+# Temp files
+*.swp
+*.bak
+*~
+
+# Virtual envoirements / builds
+venv/
+__pycache__/
