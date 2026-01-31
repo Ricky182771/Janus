@@ -44,17 +44,61 @@ log_ok()       { printf "${GREEN}[OK]${NC} %s\n" "$1"; }
 log_warn()     { printf "${YELLOW}[WARN]${NC} %s\n" "$1"; ((WARN_COUNT++)); }
 log_critical() { printf "${RED}[CRITICAL]${NC} %s\n" "$1"; ((CRITICAL_COUNT++)); }
 
+# Find janus-init script
+find_janus_init() {
+    # Prefer local bin directory
+    if [ -x "$(dirname "$0")/janus-init.sh" ]; then
+        echo "$(dirname "$0")/janus-init.sh"
+        return 0
+    fi
+
+    # Fallback to PATH
+    if command -v janus-init >/dev/null 2>&1; then
+        command -v janus-init
+        return 0
+    fi
+
+    return 1
+}
+
+
 # Exit with summary and non-zero if any criticals found
 finish() {
     echo "────────────────────────────────────────"
     printf "Summary: %s%d%s CRITICAL, %s%d%s WARN, %s%d%s INFO\n" \
-      "${RED}" "$CRITICAL_COUNT" "${NC}" "${YELLOW}" "$WARN_COUNT" "${NC}" "${BLUE}" "$INFO_COUNT" "${NC}"
+      "${RED}" "$CRITICAL_COUNT" "${NC}" \
+      "${YELLOW}" "$WARN_COUNT" "${NC}" \
+      "${BLUE}" "$INFO_COUNT" "${NC}"
+
     echo "Log saved to: $LOG_FILE"
+
+    # Hard stop if critical errors
     if [ "$CRITICAL_COUNT" -gt 0 ]; then
         echo ""
-        echo "Critical issues were detected. It is not recommended to attempt passthrough until they are resolved."
+        echo "Critical issues were detected."
+        echo "Resolve them before continuing with Janus initialization."
         exit 2
     fi
+
+    # Offer janus-init
+    init_path="$(find_janus_init || true)"
+
+    if [ -n "$init_path" ]; then
+        echo ""
+        if [ "$NO_INTERACTIVE" -eq 0 ]; then
+            read -r -p "Run janus-init now? (recommended) [Y/n]: " confirm || true
+            if [[ ! "$confirm" =~ ^[Nn] ]]; then
+                echo ""
+                echo "Launching janus-init..."
+                exec "$init_path"
+            fi
+        else
+            log_info "Non-interactive mode: skipping janus-init prompt."
+        fi
+    else
+        log_warn "janus-init not found. Run it manually to continue setup."
+    fi
+
     exit 0
 }
 
