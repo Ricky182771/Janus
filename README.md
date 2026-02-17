@@ -5,12 +5,12 @@ Janus: Seamless hybrid Linux-Windows orchestrator. VFIO + Looking Glass + Ghost 
 
 Janus is a modular orchestration framework designed for high-performance hybrid systems. Its main goal is to eliminate technical friction between Fedora KDE and Windows, turning hardware into a dynamic, shared resource instead of an operational barrier.
 
-👁️ Project Vision  
+ Project Vision  
 In Roman mythology, Janus is the god of beginnings, transitions, and dualities—depicted with two faces looking to the past and the future. This project embraces that philosophy: one face rests on the stability and privacy of Linux, while the other faces the raw performance and compatibility of Windows.
 
 Janus is not just an automation script; it's a true "Glass Box" technology: it automates complex processes (VFIO, core isolation, memory management) while maintaining total transparency and absolute user control.
 
-🎯 Core Objectives
+ Core Objectives
 
 | Objective                  | Description                                                                 |
 |----------------------------|-----------------------------------------------------------------------------|
@@ -20,7 +20,7 @@ Janus is not just an automation script; it's a true "Glass Box" technology: it a
 | Deterministic Stability    | Installation and update processes with pre-validation and full rollback capability. |
 | Data Sovereignty           | Secure hybrid Dual-Boot management, protecting physical disk integrity with automated mount locks. |
 
-🏗️ Technical Architecture  
+ Technical Architecture  
 Janus operates through a decoupled structure, ensuring distro-agnostic behavior and resistance to kernel updates.
 
 1. The Orchestrator (Core)  
@@ -36,18 +36,18 @@ Janus operates through a decoupled structure, ensuring distro-agnostic behavior 
    - Immersive Mode: Full Windows desktop for traditional workflows  
    - Transparent Mode: Suppresses explorer.exe and unnecessary services. Windows apps appear as independent windows on the Fedora desktop.
 
-🛡️ Resilience and Security  
+ Resilience and Security  
 To provide peace of mind for enthusiasts, Janus includes active safety protocols:  
 - Pre-Flight Checks: Validates IOMMU capabilities and CPU topology before any persistent changes  
 - Safety Hooks: Prevents VM boot if physical Windows partitions are mounted on the host, eliminating data corruption risk  
 - Rescue Mode (--rescue): Emergency command to restore native Windows shell and full desktop from Linux terminal
 
-🤝 Community Collaboration  
+ Community Collaboration  
 Janus is a community project by definition. Its modularity allows developers and enthusiasts to contribute support for exotic hardware, network optimizations, or integration with other desktop environments (GNOME, XFCE).
 
 > We are looking for: Bash/Python developers, VFIO experts, and users willing to test system robustness across configurations.
 
-🚀 Project Status: Phase 1 (Blueprint)  
+ Project Status: Phase 1 (Blueprint)  
 Currently in architectural design and base module development.  
 - [x] Manifesto and Objectives definition  
 - [ ] Universal Diagnostic Module (janus-check)  
