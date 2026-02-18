@@ -18,7 +18,20 @@ set -uo pipefail
 
 VERSION="0.2"
 LOG_DIR="${HOME:-/root}/.cache/janus"
-mkdir -p "$LOG_DIR"
+log_probe="$LOG_DIR/.janus_probe_$$"
+if ! mkdir -p "$LOG_DIR" 2>/dev/null || ! touch "$log_probe" >/dev/null 2>&1; then
+    LOG_DIR="/tmp/janus"
+    mkdir -p "$LOG_DIR" || {
+        echo "[ERROR] Unable to create log directory." >&2
+        exit 1
+    }
+    log_probe="$LOG_DIR/.janus_probe_$$"
+    touch "$log_probe" >/dev/null 2>&1 || {
+        echo "[ERROR] Log directory is not writable." >&2
+        exit 1
+    }
+fi
+rm -f "$log_probe"
 LOG_FILE="$LOG_DIR/last_check_$(date +%Y%m%d_%H%M%S).log"
 
 # Dual output: terminal + log
@@ -26,11 +39,11 @@ exec > >(tee -a "$LOG_FILE") 2>&1
 echo "=== Janus Diagnostic v$VERSION - $(date '+%Y-%m-%d %H:%M:%S') ==="
 
 # Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+RED=$'\033[0;31m'
+GREEN=$'\033[0;32m'
+YELLOW=$'\033[1;33m'
+BLUE=$'\033[0;34m'
+NC=$'\033[0m'
 
 # Counters / state
 CRITICAL_COUNT=0
@@ -65,7 +78,7 @@ find_janus_init() {
 # Exit with summary and non-zero if any criticals found
 finish() {
     echo "────────────────────────────────────────"
-    printf "Summary: %s%d%s CRITICAL, %s%d%s WARN, %s%d%s INFO\n" \
+    printf "Summary: %b%d%b CRITICAL, %b%d%b WARN, %b%d%b INFO\n" \
       "${RED}" "$CRITICAL_COUNT" "${NC}" \
       "${YELLOW}" "$WARN_COUNT" "${NC}" \
       "${BLUE}" "$INFO_COUNT" "${NC}"
@@ -103,6 +116,7 @@ finish() {
 }
 
 show_help() {
+    local exit_code="${1:-0}"
     cat <<EOF
 Usage: ./janus-check [OPTIONS]
 
@@ -111,20 +125,7 @@ Options:
   --version, -v      Show version
   --no-interactive   Do not prompt (useful for CI / examples)
 EOF
-    exit 0
-}
-
-# Utility: run a command and return a warning if missing
-run() {
-    # $1 = description, rest = command
-    desc="$1"; shift
-    if "$@" >/dev/null 2>&1; then
-        log_ok "$desc"
-        return 0
-    else
-        log_warn "$desc (not found / failed)"
-        return 1
-    fi
+    exit "$exit_code"
 }
 
 # ---------------------------
@@ -134,7 +135,7 @@ run() {
 # Check 1: CPU virtualization support + /dev/kvm
 check_cpu_virt() {
     log_info "Checking CPU virtualization support (VT-x / AMD-V) and /dev/kvm..."
-    cpuflags=$(grep -m1 -oE 'vmx|svm' /proc/cpuinfo || true)
+    cpuflags=$(grep -m1 -oE 'vmx|svm' /proc/cpuinfo | head -n1 || true)
     if [ -n "$cpuflags" ]; then
         log_ok "VT-x / AMD-V support detected: $cpuflags"
     else
@@ -187,7 +188,18 @@ check_virt_tools() {
 # Check 4: Kernel modules for VFIO / KVM
 check_kernel_modules() {
     log_info "Checking kernel modules related to VFIO / KVM..."
-    required=(kvm kvm_intel kvm_amd vfio vfio_pci vfio_iommu_type1)
+    cpu_vendor="$(awk -F: '/vendor_id/ {gsub(/^[ \t]+/, "", $2); print $2; exit}' /proc/cpuinfo 2>/dev/null || true)"
+    required=(kvm vfio vfio_pci vfio_iommu_type1)
+
+    case "$cpu_vendor" in
+        GenuineIntel) required+=(kvm_intel) ;;
+        AuthenticAMD) required+=(kvm_amd) ;;
+        *)
+            # Unknown vendor: check both modules as informational fallback.
+            required+=(kvm_intel kvm_amd)
+            ;;
+    esac
+
     for m in "${required[@]}"; do
         if lsmod | grep -q "^$m"; then
             log_ok "Module loaded: $m"
@@ -333,7 +345,7 @@ main() {
             --help|-h) show_help ;;
             --version|-v) echo "janus-check v$VERSION"; exit 0 ;;
             --no-interactive) NO_INTERACTIVE=1 ;;
-            *) echo "Unknown option: $1"; show_help ;;
+            *) echo "Unknown option: $1"; show_help 1 ;;
         esac
         shift
     done

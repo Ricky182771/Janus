@@ -29,11 +29,11 @@ CONF_FILE="$CONFIG_DIR/janus.conf"
 STATE_FILE="$STATE_DIR/janus.state"
 
 # Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+RED=$'\033[0;31m'
+GREEN=$'\033[0;32m'
+YELLOW=$'\033[1;33m'
+BLUE=$'\033[0;34m'
+NC=$'\033[0m'
 
 # Counters
 WARN_COUNT=0
@@ -45,6 +45,7 @@ log_warn()  { printf "${YELLOW}[WARN]${NC} %s\n" "$1"; ((WARN_COUNT++)); }
 log_error() { printf "${RED}[ERROR]${NC} %s\n" "$1"; }
 
 show_help() {
+local exit_code="${1:-0}"
 cat <<EOF
 Usage: ./janus-init [OPTIONS]
 
@@ -52,7 +53,7 @@ Options:
   --help, -h       Show this help
   --version, -v    Show version
 EOF
-exit 0
+exit "$exit_code"
 }
 
 # ---------------------------
@@ -146,7 +147,9 @@ check_permissions() {
     check_group "kvm"
     check_group "libvirt"
 
-    if systemctl is-active libvirtd >/dev/null 2>&1; then
+    if ! command -v systemctl >/dev/null 2>&1; then
+        log_warn "systemctl not available; skipping libvirtd service check."
+    elif systemctl is-active libvirtd >/dev/null 2>&1; then
         log_ok "libvirtd service is active"
     else
         log_warn "libvirtd service is not active"
@@ -162,7 +165,7 @@ finalize_config() {
 
 summary() {
     echo "────────────────────────────────────────"
-    printf "Initialization finished: %s%d%s WARN, %s%d%s INFO\n" \
+    printf "Initialization finished: %b%d%b WARN, %b%d%b INFO\n" \
         "${YELLOW}" "$WARN_COUNT" "${NC}" \
         "${BLUE}" "$INFO_COUNT" "${NC}"
 
@@ -182,7 +185,7 @@ main() {
         case "$1" in
             --help|-h) show_help ;;
             --version|-v) echo "janus-init v$VERSION"; exit 0 ;;
-            *) log_error "Unknown option: $1"; show_help ;;
+            *) log_error "Unknown option: $1"; show_help 1 ;;
         esac
         shift
     done

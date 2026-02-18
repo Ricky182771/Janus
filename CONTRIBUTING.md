@@ -27,11 +27,16 @@ Every contribution to Janus must respect these three pillars:
    - `check_capability()`: Validates if the hardware is present  
    - `apply_config()`: Applies changes (e.g., XML patches)  
    - `rollback()`: **Mandatory** function to revert changes on error
+   - Start from `modules/gpu/template.sh` and keep the flow idempotent.
 
 2. Bash Style  
    - Use clear, UPPERCASE variable names for configurations (e.g., `GPU_ID`)  
-   - Always use the project logging function: `janus_log "Message"` instead of `echo`  
+   - Use shared logger from `lib/janus-log.sh` (`janus_log LEVEL "Message"`) instead of raw `echo` for operational logs  
    - Comment complex sections explaining **why**, not just **what**
+
+3. Local Validation
+   - Run syntax checks and smoke tests before opening a PR:
+   - `bash tests/smoke.sh`
 
  Pull Request (PR) Process  
 - Fork the repository and create your branch from main (e.g., `feature/nvidia-3000-support`)  
@@ -43,7 +48,7 @@ Every contribution to Janus must respect these three pillars:
 When reporting a bug, please include:  
 - Your distribution (e.g., Fedora 41 KDE)  
 - Your hardware (CPU and detected GPUs)  
-- Janus log located at `~/.cache/janus/last_run.log`
+- Janus log located at `~/.cache/janus/last_check_*.log` (or `/tmp/janus/` fallback in restricted environments)
 
  Code of Conduct  
 In Janus, we value technical rigor and mutual respect. We are a community of enthusiasts helping other enthusiasts. Criticism must be constructive and code-focused.

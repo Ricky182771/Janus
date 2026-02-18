@@ -50,11 +50,24 @@ Janus is a community project by definition. Its modularity allows developers and
  Project Status: Phase 1 (Blueprint)  
 Currently in architectural design and base module development.  
 - [x] Manifesto and Objectives definition  
-- [ ] Universal Diagnostic Module (janus-check)  
+- [x] Universal Diagnostic Module (janus-check)  
 - [ ] Boot Orchestrator and Kernel Parameter Management  
 - [ ] Implementation of "The Bridge" for file integration
 
-How to get started? 🗿  
+Current repository scope (February 2026):
+- `bin/janus-check.sh`: host diagnostics for KVM/VFIO prerequisites.
+- `bin/janus-init.sh`: local Janus state/bootstrap files.
+- `bin/janus-bind.sh`: VFIO bind workflow (dry-run by default).
+- `modules/`: module contract scaffolding (`gpu/`, `cpu/`).
+- `lib/janus-log.sh`: shared logging contract for scripts/modules.
+- `tests/smoke.sh`: local smoke tests for script interfaces.
+
+Developer quickstart:
+```bash
+bash tests/smoke.sh
+```
+
+How to get started?
 If this project resonates with your vision of computing, check our contribution guide and join the legion working to end the friction between operating systems.
 
 Licensed under the GNU General Public License v3.0 (or later). See [LICENSE](LICENSE) for details.
