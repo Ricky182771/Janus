@@ -92,6 +92,35 @@ die() {
     exit 1
 }
 
+show_help() {
+cat <<EOF
+janus-bind v$VERSION
+Safely prepare PCI devices for VFIO passthrough.
+
+Usage:
+  janus-bind --list
+  janus-bind --device 0000:03:00.0 --dry-run
+  janus-bind --group 11 --dry-run --yes
+  sudo janus-bind --device 0000:03:00.0 --apply
+  sudo janus-bind --rollback
+
+Options:
+  --list              List detected display controllers.
+  --device PCI        Target a single PCI device.
+  --group ID          Target all devices in an IOMMU group.
+  --dry-run           Simulate actions (default mode).
+  --apply             Apply bind operations to vfio-pci (requires root).
+  --rollback          Restore last saved bind state (requires root).
+  --yes               Assume yes for confirmation prompts.
+  --verbose           Enable debug logging.
+  --help, -h          Show this help.
+
+Warning:
+  --apply writes to /sys and can impact active graphics/session devices.
+  Prefer --dry-run first and validate your IOMMU isolation.
+EOF
+}
+
 # ─────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────
@@ -100,6 +129,12 @@ require_root() {
     if [ "$(id -u)" -ne 0 ]; then
         die "This action requires root privileges. Re-run with sudo."
     fi
+}
+
+require_cmd() {
+    local cmd="$1"
+    local context="$2"
+    command -v "$cmd" >/dev/null 2>&1 || die "$context requires '$cmd' (install missing package)."
 }
 
 normalize_pci() {
@@ -162,7 +197,7 @@ confirm() {
 # ─────────────────────────────────────────────
 
 list_devices() {
-    command -v lspci >/dev/null 2>&1 || die "lspci is required (install pciutils)."
+    require_cmd "lspci" "Device listing"
     log_info "Detecting VGA / 3D / Display devices"
     mapfile -t lines < <(lspci -nn | grep -Ei 'VGA|3D controller|Display')
 
@@ -182,6 +217,20 @@ list_devices() {
         echo "    $line"
         ((i++))
     done
+}
+
+validate_option_combinations() {
+    if [ "$ROLLBACK" -eq 1 ] && [ -n "$TARGET_DEVICE$TARGET_GROUP" ]; then
+        die "--rollback cannot be combined with --device or --group."
+    fi
+
+    if [ "$ROLLBACK" -eq 1 ] && [ "$MODE" = "apply" ]; then
+        die "--rollback cannot be combined with --apply."
+    fi
+}
+
+validate_environment() {
+    [ -d /sys/bus/pci/devices ] || die "PCI sysfs path is not available: /sys/bus/pci/devices"
 }
 
 resolve_targets() {
@@ -342,21 +391,23 @@ main() {
             --yes) ASSUME_YES=1 ;;
             --verbose) VERBOSE=1 ;;
             --help|-h)
-                echo "janus-bind v$VERSION"
-                echo "Use --list, --device PCI or --group ID"
-                exit 0 ;;
+                show_help
+                exit 0
+                ;;
             *) die "Unknown option: $1" ;;
         esac
         shift
     done
 
     echo "=== Janus VFIO Bind v$VERSION ==="
+    validate_option_combinations
 
     if [ "$ROLLBACK" -eq 1 ]; then
         rollback_last
         exit 0
     fi
 
+    validate_environment
     resolve_targets
 
     grp=$(pci_iommu_group "${DEVICES[0]}")
@@ -369,6 +420,7 @@ main() {
         exit 0
     fi
 
+    log_warn "APPLY mode selected. This will modify active driver bindings."
     confirm "Apply VFIO binding now?" || exit 0
     apply_bind
     log_ok "VFIO binding completed."

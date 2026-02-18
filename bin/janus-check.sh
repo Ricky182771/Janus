@@ -50,12 +50,27 @@ CRITICAL_COUNT=0
 WARN_COUNT=0
 INFO_COUNT=0
 NO_INTERACTIVE=0
+INTERACTIVE_TTY=0
 
 # Logging helpers
 log_info()     { printf "${BLUE}[INFO]${NC} %s\n" "$1"; ((INFO_COUNT++)); }
 log_ok()       { printf "${GREEN}[OK]${NC} %s\n" "$1"; }
 log_warn()     { printf "${YELLOW}[WARN]${NC} %s\n" "$1"; ((WARN_COUNT++)); }
 log_critical() { printf "${RED}[CRITICAL]${NC} %s\n" "$1"; ((CRITICAL_COUNT++)); }
+
+have_cmd() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+require_cmd_or_warn() {
+    local cmd="$1"
+    local context="$2"
+    if have_cmd "$cmd"; then
+        return 0
+    fi
+    log_warn "$context skipped: required command '$cmd' is not installed."
+    return 1
+}
 
 # Find janus-init script
 find_janus_init() {
@@ -98,15 +113,20 @@ finish() {
 
     if [ -n "$init_path" ]; then
         echo ""
-        if [ "$NO_INTERACTIVE" -eq 0 ]; then
-            read -r -p "Run janus-init now? (recommended) [Y/n]: " confirm || true
-            if [[ ! "$confirm" =~ ^[Nn] ]]; then
-                echo ""
-                echo "Launching janus-init..."
-                exec "$init_path"
-            fi
-        else
+        if [ "$NO_INTERACTIVE" -eq 1 ]; then
             log_info "Non-interactive mode: skipping janus-init prompt."
+        elif [ "$INTERACTIVE_TTY" -eq 0 ]; then
+            log_info "No interactive TTY detected: skipping janus-init prompt."
+        else
+            if read -r -p "Run janus-init now? (recommended) [Y/n]: " confirm; then
+                if [[ ! "$confirm" =~ ^[Nn] ]]; then
+                    echo ""
+                    echo "Launching janus-init..."
+                    exec "$init_path"
+                fi
+            else
+                log_info "Input unavailable: skipping janus-init prompt."
+            fi
         fi
     else
         log_warn "janus-init not found. Run it manually to continue setup."
@@ -124,6 +144,14 @@ Options:
   --help, -h         Show this help
   --version, -v      Show version
   --no-interactive   Do not prompt (useful for CI / examples)
+
+Examples:
+  ./janus-check
+  ./janus-check --no-interactive
+
+Notes:
+  - This command is diagnostic-only. It does not apply system changes.
+  - If no interactive TTY is available, prompts are skipped automatically.
 EOF
     exit "$exit_code"
 }
@@ -188,6 +216,13 @@ check_virt_tools() {
 # Check 4: Kernel modules for VFIO / KVM
 check_kernel_modules() {
     log_info "Checking kernel modules related to VFIO / KVM..."
+    require_cmd_or_warn "lsmod" "Kernel module check" || return
+
+    if ! lsmod >/dev/null 2>&1; then
+        log_warn "Kernel module check skipped: 'lsmod' command is present but failed to execute."
+        return
+    fi
+
     cpu_vendor="$(awk -F: '/vendor_id/ {gsub(/^[ \t]+/, "", $2); print $2; exit}' /proc/cpuinfo 2>/dev/null || true)"
     required=(kvm vfio vfio_pci vfio_iommu_type1)
 
@@ -239,6 +274,13 @@ pci_iommu_group() {
 
 # Check 6: GPUs detection with driver and iommu groups
 check_gpus() {
+    require_cmd_or_warn "lspci" "GPU detection" || return
+
+    if ! lspci -nn >/dev/null 2>&1; then
+        log_warn "GPU detection skipped: 'lspci' command is present but failed to execute."
+        return
+    fi
+
     log_info "Detecting GPUs and drivers (PCI addresses + driver + IOMMU group)..."
     mapfile -t gpu_lines < <(lspci -nn | grep -iE 'VGA|3D controller|Display' || true)
 
@@ -317,6 +359,13 @@ check_system_info() {
 
 # Detailed iommu groups display (interactive or forced)
 check_iommu_groups() {
+    require_cmd_or_warn "lspci" "Detailed IOMMU group listing" || return
+
+    if ! lspci -nn >/dev/null 2>&1; then
+        log_warn "Detailed IOMMU group listing skipped: 'lspci' command is present but failed to execute."
+        return
+    fi
+
     log_info "Detailed list of IOMMU groups and their devices..."
     if [ ! -d /sys/kernel/iommu_groups ]; then
         log_critical "Could not find /sys/kernel/iommu_groups. Confirm IOMMU is enabled."
@@ -339,6 +388,10 @@ check_iommu_groups() {
 # ---------------------------
 
 main() {
+    if [ -t 0 ] && [ -t 1 ]; then
+        INTERACTIVE_TTY=1
+    fi
+
     # parse flags
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -365,14 +418,16 @@ main() {
     check_gpus
     echo "────────────────────────────────────────"
 
-    if [ "$NO_INTERACTIVE" -eq 0 ]; then
+    if [ "$NO_INTERACTIVE" -eq 1 ]; then
+        log_info "Non-interactive mode: skipping IOMMU group prompt."
+    elif [ "$INTERACTIVE_TTY" -eq 0 ]; then
+        log_info "No interactive TTY detected: skipping IOMMU group prompt."
+    else
         read -r -p "Show detailed IOMMU groups? (y/N): " confirm || true
         if [[ "$confirm" =~ ^[Yy] ]]; then
             echo "────────────────────────────────────────"
             check_iommu_groups
         fi
-    else
-        log_info "Non-interactive mode: skipping IOMMU group prompt."
     fi
 
     log_ok "Diagnostic complete."

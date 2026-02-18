@@ -44,6 +44,11 @@ log_ok()    { printf "${GREEN}[OK]${NC} %s\n" "$1"; }
 log_warn()  { printf "${YELLOW}[WARN]${NC} %s\n" "$1"; ((WARN_COUNT++)); }
 log_error() { printf "${RED}[ERROR]${NC} %s\n" "$1"; }
 
+die() {
+    log_error "$1"
+    exit 1
+}
+
 show_help() {
 local exit_code="${1:-0}"
 cat <<EOF
@@ -52,6 +57,14 @@ Usage: ./janus-init [OPTIONS]
 Options:
   --help, -h       Show this help
   --version, -v    Show version
+
+Examples:
+  ./janus-init
+  ./janus-init --version
+
+Notes:
+  - This command is non-destructive and does not edit kernel/boot settings.
+  - It only creates Janus state/config files in your home directory.
 EOF
 exit "$exit_code"
 }
@@ -91,7 +104,7 @@ create_directories() {
         "$CACHE_DIR" \
         "$LOG_DIR" \
         "$STATE_DIR" \
-        "$PROFILE_DIR"
+        "$PROFILE_DIR" || die "Unable to create Janus directories under $HOME."
 
     log_ok "Directories initialized under ~/.config and ~/.cache"
 }
@@ -124,6 +137,7 @@ LOOKING_GLASS="disabled"
 # Safety flags
 INIT_COMPLETE="false"
 EOF
+    [ -f "$CONF_FILE" ] || die "Failed to create configuration file: $CONF_FILE"
 
     log_ok "janus.conf created"
 }
@@ -137,6 +151,7 @@ INIT_DONE=true
 INIT_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 LAST_ACTION="janus-init"
 EOF
+    [ -f "$STATE_FILE" ] || die "Failed to create state file: $STATE_FILE"
 
     log_ok "State file written"
 }
@@ -159,7 +174,7 @@ check_permissions() {
 
 finalize_config() {
     log_info "Finalizing configuration flags"
-    sed -i 's/INIT_COMPLETE="false"/INIT_COMPLETE="true"/' "$CONF_FILE"
+    sed -i 's/INIT_COMPLETE="false"/INIT_COMPLETE="true"/' "$CONF_FILE" || die "Could not update INIT_COMPLETE in $CONF_FILE"
     log_ok "Janus marked as initialized"
 }
 
@@ -174,6 +189,8 @@ summary() {
     echo "  → Review: $CONF_FILE"
     echo "  → Run: janus-check (if not already done)"
     echo "  → Continue with: janus-bind (when ready for VFIO)"
+    echo ""
+    echo "This command did not apply system-level changes."
 }
 
 # ---------------------------

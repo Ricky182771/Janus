@@ -2,7 +2,7 @@
 # Shared logging contract for Janus scripts and modules.
 
 if [ -n "${JANUS_LOG_LIB_LOADED:-}" ]; then
-    return 0
+    return 0 2>/dev/null || exit 0
 fi
 JANUS_LOG_LIB_LOADED=1
 

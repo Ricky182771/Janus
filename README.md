@@ -1,60 +1,103 @@
 # Janus Project: The Two-Faced Orchestrator
-Janus: Seamless hybrid Linux-Windows orchestrator. VFIO + Looking Glass + Ghost Shell mode for running Windows applications natively on Fedora KDE with full integration and brutal performance. Community-driven project in early blueprint stage.
 
-> "Uniting the sovereignty of Linux with the raw power of Windows under a single deterministic architecture."
+Janus is a Linux-host orchestration toolkit for VFIO-oriented hybrid workflows.
 
-Janus is a modular orchestration framework designed for high-performance hybrid systems. Its main goal is to eliminate technical friction between Fedora KDE and Windows, turning hardware into a dynamic, shared resource instead of an operational barrier.
+Current focus (pre-alpha):
 
- Project Vision  
-In Roman mythology, Janus is the god of beginnings, transitions, and dualities—depicted with two faces looking to the past and the future. This project embraces that philosophy: one face rests on the stability and privacy of Linux, while the other faces the raw performance and compatibility of Windows.
+- host diagnostics for VFIO/KVM prerequisites;
+- safe, explicit initialization of local Janus state;
+- dry-run-first PCI binding workflow for vfio-pci;
+- modular architecture scaffolding for future CPU/GPU modules.
 
-Janus is not just an automation script; it's a true "Glass Box" technology: it automates complex processes (VFIO, core isolation, memory management) while maintaining total transparency and absolute user control.
+## Vision
 
- Core Objectives
+Janus aims to reduce friction between Linux sovereignty and Windows compatibility/performance by building transparent automation around virtualization primitives.
 
-| Objective                  | Description                                                                 |
-|----------------------------|-----------------------------------------------------------------------------|
-| Modular Abstraction        | Plugin-based architecture supporting diverse CPU (Intel/AMD) and GPU (NVIDIA/AMD/Intel) topologies. |
-| Seamless Integration       | Run .exe binaries via "The Bridge" with a simple double-click from the native desktop. |
-| Resource Efficiency        | "Ghost Shell" mode that eliminates Windows graphical environment for maximum performance in games and professional applications. |
-| Deterministic Stability    | Installation and update processes with pre-validation and full rollback capability. |
-| Data Sovereignty           | Secure hybrid Dual-Boot management, protecting physical disk integrity with automated mount locks. |
+The project follows a "glass box" philosophy:
 
- Technical Architecture  
-Janus operates through a decoupled structure, ensuring distro-agnostic behavior and resistance to kernel updates.
+- each critical action is explicit;
+- non-destructive paths are available by default;
+- rollback paths are first-class where applicable.
 
-1. The Orchestrator (Core)  
-   Main engine managing the VM lifecycle, loading hardware-specific modules. Built on libvirt and QEMU, optimized for ultra-low latency.
+## What Exists Today
 
-2. The Bridge (EXE Bridge)  
-   Integration system associating Windows files on the host. When executing a .exe, Janus:  
-   - Checks VM status  
-   - Injects command via qemu-guest-agent  
-   - Displays the application via Looking Glass with single-frame latency
+Implemented commands:
 
-3. User Experience Modes  
-   - Immersive Mode: Full Windows desktop for traditional workflows  
-   - Transparent Mode: Suppresses explorer.exe and unnecessary services. Windows apps appear as independent windows on the Fedora desktop.
+- `bin/janus-check.sh`: diagnostic checks for CPU virtualization, IOMMU, tooling, modules, hugepages, and GPU/IOMMU visibility.
+- `bin/janus-init.sh`: initializes Janus user config/state under `~/.config/janus` and cache/log paths.
+- `bin/janus-bind.sh`: lists devices, validates targets, runs dry-run summaries, and supports explicit apply/rollback flows.
 
- Resilience and Security  
-To provide peace of mind for enthusiasts, Janus includes active safety protocols:  
-- Pre-Flight Checks: Validates IOMMU capabilities and CPU topology before any persistent changes  
-- Safety Hooks: Prevents VM boot if physical Windows partitions are mounted on the host, eliminating data corruption risk  
-- Rescue Mode (--rescue): Emergency command to restore native Windows shell and full desktop from Linux terminal
+Implemented architecture scaffolding:
 
- Community Collaboration  
-Janus is a community project by definition. Its modularity allows developers and enthusiasts to contribute support for exotic hardware, network optimizations, or integration with other desktop environments (GNOME, XFCE).
+- `lib/janus-log.sh`: shared logging contract.
+- `modules/gpu/template.sh`: baseline module lifecycle template.
+- `modules/README.md`: module lifecycle and quality contract.
+- `tests/smoke.sh`: non-destructive smoke checks.
 
-> We are looking for: Bash/Python developers, VFIO experts, and users willing to test system robustness across configurations.
+## What Is Not Implemented Yet
 
- Project Status: Phase 1 (Blueprint)  
-Currently in architectural design and base module development.  
-- [x] Manifesto and Objectives definition  
-- [ ] Universal Diagnostic Module (janus-check)  
-- [ ] Boot Orchestrator and Kernel Parameter Management  
-- [ ] Implementation of "The Bridge" for file integration
+Still in roadmap:
 
-How to get started?
-If this project resonates with your vision of computing, check our contribution guide and join the legion working to end the friction between operating systems.
+- full orchestrator command (`bin/janus`);
+- VM lifecycle automation and profile orchestration;
+- Windows guest bridge agent and desktop integration layer;
+- libvirt XML templates and guest-side script bundles.
 
-Licensed under the GNU General Public License v3.0 (or later). See [LICENSE](LICENSE) for details.
+## Repository Map
+
+```text
+bin/                User-facing commands (check/init/bind)
+lib/                Shared script libraries (logging contract)
+modules/            Hardware/module scaffolding and templates
+tests/              Smoke validation scripts
+README.md           Project overview and current scope
+CONTRIBUTING.md     Contributor workflow and quality gates
+```
+
+## Project Status
+
+Phase: **Pre-alpha / Blueprint + Core Tooling**
+
+Progress snapshot:
+
+- [x] Manifesto and objectives
+- [x] Diagnostic module (`janus-check`)
+- [x] Initialization workflow (`janus-init`)
+- [x] Safe VFIO bind workflow (`janus-bind`)
+- [x] Module scaffolding (`lib/`, `modules/`)
+- [ ] Core orchestrator (`bin/janus`)
+- [ ] Guest bridge implementation
+- [ ] VM template generation and lifecycle integration
+
+## Non-Destructive Quickstart
+
+```bash
+cd /path/to/Janus
+
+# Run smoke checks in temporary HOME
+bash tests/smoke.sh
+
+# Manual non-destructive diagnostics
+export HOME=/tmp/janus-lab
+mkdir -p "$HOME"
+
+bash bin/janus-check.sh --no-interactive
+bash bin/janus-bind.sh --list
+bash bin/janus-bind.sh --device 0000:03:00.0 --dry-run --yes
+```
+
+Notes:
+
+- `janus-bind` defaults to dry-run.
+- `--apply` requires explicit opt-in and root privileges.
+- Running with temporary `HOME` isolates Janus state from your real profile.
+
+## Documentation Entry Points
+
+- Module architecture: `modules/README.md`
+- Shared library contract: `lib/README.md`
+- Contribution process: `CONTRIBUTING.md`
+
+## License
+
+Licensed under the GNU General Public License v3.0 (or later). See `LICENSE` for details.

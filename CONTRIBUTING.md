@@ -1,56 +1,90 @@
- Contributing to Janus Project
+# Contributing to Janus
 
-Welcome to the Legion! If you're here, you share the vision of a Linux desktop without software compatibility limitations. Janus is an ambitious, modular project, and your help is essential to make it work on every imaginable hardware combination.
+Janus is currently a pre-alpha project focused on safe VFIO/KVM tooling and modular foundations.
 
-To maintain the technical stability and transparency promised in our manifesto, we ask all contributors to follow these guidelines.
+This guide defines the minimum quality and consistency bar for contributions.
 
- Our Philosophy: "The Glass Box"  
-Every contribution to Janus must respect these three pillars:  
-- **Modularity**: Don't write monolithic functions. Create small modules that do one thing well.  
-- **Transparency**: The user must know exactly what's happening. Every system change must be preceded by validation and followed by clear logging.  
-- **Determinism**: If a script runs twice, the result must be the same (idempotency). We must not break the system on re-execution.
+## Core Principles
 
- Areas Where You Can Help
+Every contribution should preserve these principles:
 
-| Area                  | Description                                                                 | Languages       |
-|-----------------------|-----------------------------------------------------------------------------|-----------------|
-| GPU Modules           | Isolation logic (VFIO) for specific models (NVIDIA, AMD, Intel)             | Bash, XML       |
-| CPU Modules           | Topology optimization, core pinning, power management                       | Bash            |
-| The Bridge (Agent)    | Development of the agent living inside Windows to execute .exe files        | Python, PowerShell |
-| Interface (UI/UX)     | Visual integration with KDE Plasma (notifications, dialogs, widgets)        | QML, Bash       |
-| Documentation         | Verified hardware guides and BIOS tutorials                                 | Markdown        |
+- **Modularity**: isolate responsibilities; avoid monolithic scripts.
+- **Transparency**: log intent and outcomes clearly.
+- **Determinism**: repeated runs should produce predictable results.
+- **Safety-first defaults**: prefer dry-run/read-only behavior where possible.
 
- Code Standards
+## Where To Start
 
-1. Module Structure  
-   If adding support for a new GPU, place the file in `modules/gpu/` and follow this structure:  
-   - `check_capability()`: Validates if the hardware is present  
-   - `apply_config()`: Applies changes (e.g., XML patches)  
-   - `rollback()`: **Mandatory** function to revert changes on error
-   - Start from `modules/gpu/template.sh` and keep the flow idempotent.
+Current contribution-friendly areas:
 
-2. Bash Style  
-   - Use clear, UPPERCASE variable names for configurations (e.g., `GPU_ID`)  
-   - Use shared logger from `lib/janus-log.sh` (`janus_log LEVEL "Message"`) instead of raw `echo` for operational logs  
-   - Comment complex sections explaining **why**, not just **what**
+- GPU module implementations under `modules/gpu/`
+- CPU topology/pinning modules under `modules/cpu/`
+- Additional shared helpers under `lib/`
+- Diagnostic coverage and edge-case handling in `bin/`
+- Documentation and tested usage examples
 
-3. Local Validation
-   - Run syntax checks and smoke tests before opening a PR:
-   - `bash tests/smoke.sh`
+## Contracts You Must Follow
 
- Pull Request (PR) Process  
-- Fork the repository and create your branch from main (e.g., `feature/nvidia-3000-support`)  
-- Test your change: If it touches GRUB or libvirt, test on real hardware or a controlled environment  
-- Document: If you add a new variable to `janus.conf`, update the example file  
-- Submit the PR: Clearly describe what problem it solves or what hardware it supports
+Before coding, read:
 
- Bug Reports (Issues)  
-When reporting a bug, please include:  
-- Your distribution (e.g., Fedora 41 KDE)  
-- Your hardware (CPU and detected GPUs)  
-- Janus log located at `~/.cache/janus/last_check_*.log` (or `/tmp/janus/` fallback in restricted environments)
+- `modules/README.md` (module lifecycle contract)
+- `lib/README.md` (shared library and logging contract)
 
- Code of Conduct  
-In Janus, we value technical rigor and mutual respect. We are a community of enthusiasts helping other enthusiasts. Criticism must be constructive and code-focused.
+### Module contract
 
-Thank you for helping us tear down the borders between Windows and Linux!
+Each module must implement:
+
+- `check_capability`
+- `apply_config`
+- `rollback`
+
+Use `modules/gpu/template.sh` as baseline.
+
+### Logging contract
+
+Operational logs should use `lib/janus-log.sh` (`janus_log` and wrappers), not ad-hoc `echo` for critical actions.
+
+## Coding Standards
+
+- Bash scripts should be explicit and fail safely.
+- Validate required commands/files before critical actions.
+- Prefer clear error paths over silent partial behavior.
+- Keep comments focused on **why** a block exists.
+- Preserve non-destructive defaults unless explicitly required otherwise.
+
+## Local Validation Before PR
+
+Run these checks before opening a pull request:
+
+```bash
+bash tests/smoke.sh
+for f in bin/*.sh lib/*.sh modules/gpu/template.sh tests/smoke.sh; do
+  bash -n "$f"
+done
+```
+
+## Pull Request Expectations
+
+A strong PR includes:
+
+1. A clear problem statement.
+2. Scope boundaries (what changed / what did not).
+3. Risk notes for behavior or safety changes.
+4. Updated docs if contracts or workflows changed.
+5. Validation evidence (commands and outcomes).
+
+## Bug Reports
+
+When opening an issue, include:
+
+- distribution and kernel version;
+- CPU/GPU information;
+- command invoked and full output;
+- relevant Janus logs:
+  - `~/.cache/janus/last_check_*.log`
+  - `~/.cache/janus/logs/janus-bind_*.log`
+  - fallback path in restricted environments: `/tmp/janus/`.
+
+## Code of Conduct
+
+Keep feedback technical, specific, and respectful. Focus criticism on behavior and implementation details, not people.
