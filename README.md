@@ -26,10 +26,13 @@ Implemented commands:
 - `bin/janus-check.sh`: diagnostic checks for CPU virtualization, IOMMU, tooling, modules, hugepages, and GPU/IOMMU visibility.
 - `bin/janus-init.sh`: initializes Janus user config/state under `~/.config/janus` and cache/log paths.
 - `bin/janus-bind.sh`: lists devices, validates targets, runs dry-run summaries, and supports explicit apply/rollback flows.
+- `bin/janus-vm.sh`: creates VM definitions from templates and manages VM lifecycle (`create/start/stop/status`).
 
 Implemented architecture scaffolding:
 
 - `lib/janus-log.sh`: shared logging contract.
+- `templates/libvirt/windows-base.xml`: baseline Windows VM template.
+- `templates/libvirt/windows-gpu-passthrough.xml`: passthrough-ready template with GPU hostdev mappings.
 - `modules/gpu/template.sh`: baseline module lifecycle template.
 - `modules/README.md`: module lifecycle and quality contract.
 - `tests/smoke.sh`: non-destructive smoke checks.
@@ -46,8 +49,9 @@ Still in roadmap:
 ## Repository Map
 
 ```text
-bin/                User-facing commands (check/init/bind)
+bin/                User-facing commands (check/init/bind/vm)
 lib/                Shared script libraries (logging contract)
+templates/libvirt/  Libvirt XML templates (base + passthrough)
 modules/            Hardware/module scaffolding and templates
 tests/              Smoke validation scripts
 README.md           Project overview and current scope
@@ -64,10 +68,11 @@ Progress snapshot:
 - [x] Diagnostic module (`janus-check`)
 - [x] Initialization workflow (`janus-init`)
 - [x] Safe VFIO bind workflow (`janus-bind`)
+- [x] VM helper command and templates (`janus-vm`, `templates/libvirt/`)
 - [x] Module scaffolding (`lib/`, `modules/`)
 - [ ] Core orchestrator (`bin/janus`)
 - [ ] Guest bridge implementation
-- [ ] VM template generation and lifecycle integration
+- [ ] End-to-end VM profile lifecycle automation
 
 ## Non-Destructive Quickstart
 
@@ -84,6 +89,7 @@ mkdir -p "$HOME"
 bash bin/janus-check.sh --no-interactive
 bash bin/janus-bind.sh --list
 bash bin/janus-bind.sh --device 0000:03:00.0 --dry-run --yes
+bash bin/janus-vm.sh create --name win11 --mode base
 ```
 
 Notes:

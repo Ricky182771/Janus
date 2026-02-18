@@ -19,6 +19,7 @@ Current contribution-friendly areas:
 
 - GPU module implementations under `modules/gpu/`
 - CPU topology/pinning modules under `modules/cpu/`
+- VM template and definition workflows under `templates/libvirt/` and `bin/janus-vm.sh`
 - Additional shared helpers under `lib/`
 - Diagnostic coverage and edge-case handling in `bin/`
 - Documentation and tested usage examples
@@ -61,6 +62,7 @@ bash tests/smoke.sh
 for f in bin/*.sh lib/*.sh modules/gpu/template.sh tests/smoke.sh; do
   bash -n "$f"
 done
+bash bin/janus-vm.sh --help
 ```
 
 ## Pull Request Expectations

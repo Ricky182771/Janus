@@ -1,0 +1,77 @@
+<domain type='kvm'>
+  <name>__VM_NAME__</name>
+  <memory unit='MiB'>__MEMORY_MIB__</memory>
+  <currentMemory unit='MiB'>__MEMORY_MIB__</currentMemory>
+  <vcpu placement='static'>__VCPUS__</vcpu>
+  <os>
+    <type arch='x86_64' machine='pc-q35-8.2'>hvm</type>
+    <loader readonly='yes' type='pflash'>__OVMF_CODE__</loader>
+    <nvram template='__OVMF_VARS__'>__NVRAM_PATH__</nvram>
+    <boot dev='hd'/>
+  </os>
+  <features>
+    <acpi/>
+    <apic/>
+    <hyperv mode='custom'>
+      <relaxed state='on'/>
+      <vapic state='on'/>
+      <spinlocks state='on' retries='8191'/>
+      <vendor_id state='on' value='JanusKVM'/>
+    </hyperv>
+    <kvm>
+      <hidden state='on'/>
+    </kvm>
+  </features>
+  <cpu mode='host-passthrough' check='none' migratable='on'/>
+  <clock offset='localtime'>
+    <timer name='rtc' tickpolicy='catchup'/>
+    <timer name='pit' tickpolicy='delay'/>
+    <timer name='hpet' present='no'/>
+  </clock>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>destroy</on_crash>
+  <devices>
+    <emulator>/usr/bin/qemu-system-x86_64</emulator>
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2' cache='none' io='native'/>
+      <source file='__DISK_PATH__'/>
+      <target dev='vda' bus='virtio'/>
+      <boot order='1'/>
+    </disk>
+__ISO_DEVICE_BLOCK__
+    <controller type='usb' model='qemu-xhci'/>
+    <controller type='sata' index='0'/>
+    <controller type='pci' model='pcie-root'/>
+    <controller type='virtio-serial' index='0'/>
+    <interface type='network'>
+      <source network='__NETWORK_NAME__'/>
+      <model type='virtio'/>
+    </interface>
+    <input type='tablet' bus='usb'/>
+    <input type='keyboard' bus='ps2'/>
+    <graphics type='spice' autoport='yes' listen='127.0.0.1'/>
+    <video>
+      <model type='virtio' heads='1' primary='yes'/>
+    </video>
+    <hostdev mode='subsystem' type='pci' managed='yes'>
+      <driver name='vfio'/>
+      <source>
+        <address domain='__GPU_DOMAIN__' bus='__GPU_BUS__' slot='__GPU_SLOT__' function='__GPU_FUNCTION__'/>
+      </source>
+    </hostdev>
+    <hostdev mode='subsystem' type='pci' managed='yes'>
+      <driver name='vfio'/>
+      <source>
+        <address domain='__GPU_AUDIO_DOMAIN__' bus='__GPU_AUDIO_BUS__' slot='__GPU_AUDIO_SLOT__' function='__GPU_AUDIO_FUNCTION__'/>
+      </source>
+    </hostdev>
+    <channel type='unix'>
+      <target type='virtio' name='org.qemu.guest_agent.0'/>
+    </channel>
+    <rng model='virtio'>
+      <backend model='random'>/dev/urandom</backend>
+    </rng>
+    <memballoon model='virtio'/>
+  </devices>
+</domain>

@@ -34,12 +34,14 @@ echo "[INFO] Version/help checks"
 assert_zero bash "$ROOT_DIR/bin/janus-init.sh" --version
 assert_zero bash "$ROOT_DIR/bin/janus-check.sh" --version
 assert_zero bash "$ROOT_DIR/bin/janus-bind.sh" --help
+assert_zero bash "$ROOT_DIR/bin/janus-vm.sh" --help
 
 echo "[INFO] Error-path checks"
 assert_nonzero bash "$ROOT_DIR/bin/janus-init.sh" --invalid
 assert_nonzero bash "$ROOT_DIR/bin/janus-check.sh" --invalid
 assert_nonzero bash "$ROOT_DIR/bin/janus-bind.sh" --device
 assert_nonzero bash "$ROOT_DIR/bin/janus-bind.sh" --group
+assert_nonzero bash "$ROOT_DIR/bin/janus-vm.sh" invalid-action
 assert_nonzero bash "$ROOT_DIR/bin/janus-bind.sh" --device 0000:ff:ff.f --dry-run --yes
 assert_nonzero bash "$ROOT_DIR/bin/janus-bind.sh" --rollback --apply
 assert_nonzero bash "$ROOT_DIR/bin/janus-bind.sh" --rollback --device 0000:03:00.0
