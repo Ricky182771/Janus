@@ -31,8 +31,7 @@ Implemented commands:
 Implemented architecture scaffolding:
 
 - `lib/janus-log.sh`: shared logging contract.
-- `templates/libvirt/windows-base.xml`: baseline Windows VM template.
-- `templates/libvirt/windows-gpu-passthrough.xml`: passthrough-ready template with GPU hostdev mappings.
+- `templates/libvirt/windows-base.xml`: baseline Windows VM template with injectable blocks for ISO, display stack, and GPU passthrough hostdev entries.
 - `modules/gpu/template.sh`: baseline module lifecycle template.
 - `modules/README.md`: module lifecycle and quality contract.
 - `tests/smoke.sh`: non-destructive smoke checks.
@@ -51,7 +50,7 @@ Still in roadmap:
 ```text
 bin/                User-facing commands (check/init/bind/vm)
 lib/                Shared script libraries (logging contract)
-templates/libvirt/  Libvirt XML templates (base + passthrough)
+templates/libvirt/  Libvirt XML templates (single base + injected blocks)
 modules/            Hardware/module scaffolding and templates
 tests/              Smoke validation scripts
 README.md           Project overview and current scope

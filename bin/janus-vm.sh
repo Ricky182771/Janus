@@ -336,16 +336,63 @@ build_iso_block() {
 EOF
 }
 
+build_display_block() {
+    if [ "$MODE" = "passthrough" ]; then
+        cat <<EOF
+    <graphics type='spice' autoport='yes' listen='127.0.0.1'/>
+    <video>
+      <model type='virtio' heads='1' primary='yes'/>
+    </video>
+EOF
+        return 0
+    fi
+
+    cat <<EOF
+    <graphics type='spice' autoport='yes' listen='127.0.0.1'/>
+    <video>
+      <model type='virtio' heads='1' primary='yes'/>
+    </video>
+    <sound model='ich9'/>
+    <audio id='1' type='spice'/>
+EOF
+}
+
+build_gpu_hostdev_block() {
+    if [ "$MODE" != "passthrough" ]; then
+        printf '%s\n' "    <!-- No PCIe GPU passthrough configured -->"
+        return 0
+    fi
+
+    cat <<EOF
+    <hostdev mode='subsystem' type='pci' managed='yes'>
+      <driver name='vfio'/>
+      <source>
+        <address domain='${GPU_DOMAIN}' bus='${GPU_BUS}' slot='${GPU_SLOT}' function='${GPU_FUNCTION}'/>
+      </source>
+    </hostdev>
+    <hostdev mode='subsystem' type='pci' managed='yes'>
+      <driver name='vfio'/>
+      <source>
+        <address domain='${GPU_AUDIO_DOMAIN}' bus='${GPU_AUDIO_BUS}' slot='${GPU_AUDIO_SLOT}' function='${GPU_AUDIO_FUNCTION}'/>
+      </source>
+    </hostdev>
+EOF
+}
+
 render_xml_definition() {
     local template_file="$1"
     local out_file="$2"
     local iso_block
+    local display_block
+    local gpu_hostdev_block
     local nvram_path="$NVRAM_DIR/${VM_NAME}_VARS.fd"
 
     [ -f "$template_file" ] || die "Template not found: $template_file"
 
     iso_block="$(build_iso_block)"
     iso_block="$(printf '%s' "$iso_block" | sed "s|__ISO_PATH__|$(sed_escape "$ISO_PATH")|g")"
+    display_block="$(build_display_block)"
+    gpu_hostdev_block="$(build_gpu_hostdev_block)"
 
     awk \
         -v VM_NAME="$VM_NAME" \
@@ -357,14 +404,8 @@ render_xml_definition() {
         -v DISK_PATH="$DISK_PATH" \
         -v NETWORK_NAME="$NETWORK_NAME" \
         -v ISO_BLOCK="$iso_block" \
-        -v GPU_DOMAIN="${GPU_DOMAIN:-}" \
-        -v GPU_BUS="${GPU_BUS:-}" \
-        -v GPU_SLOT="${GPU_SLOT:-}" \
-        -v GPU_FUNCTION="${GPU_FUNCTION:-}" \
-        -v GPU_AUDIO_DOMAIN="${GPU_AUDIO_DOMAIN:-}" \
-        -v GPU_AUDIO_BUS="${GPU_AUDIO_BUS:-}" \
-        -v GPU_AUDIO_SLOT="${GPU_AUDIO_SLOT:-}" \
-        -v GPU_AUDIO_FUNCTION="${GPU_AUDIO_FUNCTION:-}" \
+        -v DISPLAY_BLOCK="$display_block" \
+        -v GPU_HOSTDEV_BLOCK="$gpu_hostdev_block" \
         '
         {
             gsub(/__VM_NAME__/, VM_NAME)
@@ -376,14 +417,8 @@ render_xml_definition() {
             gsub(/__DISK_PATH__/, DISK_PATH)
             gsub(/__NETWORK_NAME__/, NETWORK_NAME)
             gsub(/__ISO_DEVICE_BLOCK__/, ISO_BLOCK)
-            gsub(/__GPU_DOMAIN__/, GPU_DOMAIN)
-            gsub(/__GPU_BUS__/, GPU_BUS)
-            gsub(/__GPU_SLOT__/, GPU_SLOT)
-            gsub(/__GPU_FUNCTION__/, GPU_FUNCTION)
-            gsub(/__GPU_AUDIO_DOMAIN__/, GPU_AUDIO_DOMAIN)
-            gsub(/__GPU_AUDIO_BUS__/, GPU_AUDIO_BUS)
-            gsub(/__GPU_AUDIO_SLOT__/, GPU_AUDIO_SLOT)
-            gsub(/__GPU_AUDIO_FUNCTION__/, GPU_AUDIO_FUNCTION)
+            gsub(/__DISPLAY_DEVICE_BLOCK__/, DISPLAY_BLOCK)
+            gsub(/__GPU_HOSTDEV_BLOCK__/, GPU_HOSTDEV_BLOCK)
             print
         }
         ' "$template_file" > "$out_file" || die "Unable to render VM definition: $out_file"
@@ -391,18 +426,15 @@ render_xml_definition() {
 
 create_vm() {
     local def_file="$DEF_DIR/${VM_NAME}.xml"
-    local template_file
+    local template_file="$TEMPLATE_DIR/windows-base.xml"
     local nvram_path="$NVRAM_DIR/${VM_NAME}_VARS.fd"
 
     validate_create
     prepare_layout
 
     if [ "$MODE" = "passthrough" ]; then
-        template_file="$TEMPLATE_DIR/windows-gpu-passthrough.xml"
         parse_pci_parts "$GPU_PCI" "GPU"
         parse_pci_parts "$GPU_AUDIO_PCI" "GPU_AUDIO"
-    else
-        template_file="$TEMPLATE_DIR/windows-base.xml"
     fi
 
     render_xml_definition "$template_file" "$def_file"

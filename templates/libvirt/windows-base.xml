@@ -50,12 +50,8 @@ __ISO_DEVICE_BLOCK__
     </interface>
     <input type='tablet' bus='usb'/>
     <input type='keyboard' bus='ps2'/>
-    <graphics type='spice' autoport='yes' listen='127.0.0.1'/>
-    <video>
-      <model type='virtio' heads='1' primary='yes'/>
-    </video>
-    <sound model='ich9'/>
-    <audio id='1' type='spice'/>
+__DISPLAY_DEVICE_BLOCK__
+__GPU_HOSTDEV_BLOCK__
     <channel type='unix'>
       <target type='virtio' name='org.qemu.guest_agent.0'/>
     </channel>
