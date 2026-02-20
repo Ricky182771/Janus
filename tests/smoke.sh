@@ -26,9 +26,9 @@ assert_zero() {
 }
 
 echo "[INFO] Syntax check"
-for file in "$ROOT_DIR"/bin/*.sh "$ROOT_DIR"/lib/*.sh "$ROOT_DIR"/modules/gpu/template.sh; do
+while IFS= read -r file; do
     bash -n "$file"
-done
+done < <(find "$ROOT_DIR/bin" "$ROOT_DIR/lib" "$ROOT_DIR/modules" -type f -name "*.sh" | sort)
 
 echo "[INFO] Version/help checks"
 assert_zero bash "$ROOT_DIR/bin/janus-init.sh" --version
@@ -45,6 +45,28 @@ assert_nonzero bash "$ROOT_DIR/bin/janus-vm.sh" invalid-action
 assert_nonzero bash "$ROOT_DIR/bin/janus-bind.sh" --device 0000:ff:ff.f --dry-run --yes
 assert_nonzero bash "$ROOT_DIR/bin/janus-bind.sh" --rollback --apply
 assert_nonzero bash "$ROOT_DIR/bin/janus-bind.sh" --rollback --device 0000:03:00.0
+
+echo "[INFO] VM XML defaults (stealth + passthrough) checks"
+assert_zero bash "$ROOT_DIR/bin/janus-vm.sh" create --name smoke-win11 --mode passthrough --gpu 0000:03:00.0 --gpu-audio 0000:03:00.1 --yes
+VM_XML="$TMP_HOME/.config/janus/vm/definitions/smoke-win11.xml"
+[ -f "$VM_XML" ] || fail "Expected VM XML definition not found: $VM_XML"
+grep -q "<hidden state='on'/>" "$VM_XML" || fail "Expected KVM hidden state enabled by default."
+grep -q "<feature policy='disable' name='hypervisor'/>" "$VM_XML" || fail "Expected CPU hypervisor CPUID bit disabled by default."
+grep -q "<hostdev mode='subsystem' type='pci' managed='yes'>" "$VM_XML" || fail "Expected passthrough hostdev block in VM XML."
+
+echo "[INFO] Single-GPU + block storage + unattended checks"
+assert_zero bash "$ROOT_DIR/bin/janus-vm.sh" create --name smoke-single --mode base --single-gpu-mode cpu-only --storage block --disk-path /dev/null --unattended --win-user smokeuser --yes --no-guided
+VM_XML_SINGLE="$TMP_HOME/.config/janus/vm/definitions/smoke-single.xml"
+[ -f "$VM_XML_SINGLE" ] || fail "Expected VM XML definition not found: $VM_XML_SINGLE"
+grep -q "<disk type='block' device='disk'>" "$VM_XML_SINGLE" || fail "Expected block-disk storage mode in VM XML."
+grep -q "<source dev='/dev/null'/>" "$VM_XML_SINGLE" || fail "Expected block source path in VM XML."
+grep -q "<model type='vga' heads='1' primary='yes'/>" "$VM_XML_SINGLE" || fail "Expected CPU-only video model in VM XML."
+grep -q "<source file='$TMP_HOME/.config/janus/vm/unattend/smoke-single.iso'/>" "$VM_XML_SINGLE" || fail "Expected unattended ISO device block in VM XML."
+
+assert_zero bash "$ROOT_DIR/bin/janus-vm.sh" create --name smoke-shared --mode base --single-gpu-mode shared-vram --yes --no-guided
+VM_XML_SHARED="$TMP_HOME/.config/janus/vm/definitions/smoke-shared.xml"
+[ -f "$VM_XML_SHARED" ] || fail "Expected VM XML definition not found: $VM_XML_SHARED"
+grep -q "<acceleration accel3d='yes'/>" "$VM_XML_SHARED" || fail "Expected shared-vram 3D acceleration in VM XML."
 
 echo "[INFO] No-TTY regression checks"
 bash "$ROOT_DIR/bin/janus-check.sh" </dev/null >"$TMP_HOME/janus-check-notty.log" 2>&1 || true

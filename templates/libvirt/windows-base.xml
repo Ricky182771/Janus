@@ -12,6 +12,7 @@
   <features>
     <acpi/>
     <apic/>
+    <vmport state='off'/>
     <hyperv mode='custom'>
       <relaxed state='on'/>
       <vapic state='on'/>
@@ -22,7 +23,9 @@
       <hidden state='on'/>
     </kvm>
   </features>
-  <cpu mode='host-passthrough' check='none' migratable='on'/>
+  <cpu mode='host-passthrough' check='none' migratable='on'>
+    <feature policy='disable' name='hypervisor'/>
+  </cpu>
   <clock offset='localtime'>
     <timer name='rtc' tickpolicy='catchup'/>
     <timer name='pit' tickpolicy='delay'/>
@@ -33,13 +36,9 @@
   <on_crash>destroy</on_crash>
   <devices>
     <emulator>/usr/bin/qemu-system-x86_64</emulator>
-    <disk type='file' device='disk'>
-      <driver name='qemu' type='qcow2' cache='none' io='native'/>
-      <source file='__DISK_PATH__'/>
-      <target dev='vda' bus='virtio'/>
-      <boot order='1'/>
-    </disk>
+__PRIMARY_DISK_BLOCK__
 __ISO_DEVICE_BLOCK__
+__UNATTEND_DEVICE_BLOCK__
     <controller type='usb' model='qemu-xhci'/>
     <controller type='sata' index='0'/>
     <controller type='pci' model='pcie-root'/>

@@ -48,6 +48,8 @@ Operational logs should use `lib/janus-log.sh` (`janus_log` and wrappers), not a
 ## Coding Standards
 
 - Bash scripts should be explicit and fail safely.
+- Keep `bin/*.sh` wrappers thin; place implementation logic under `lib/<command>/`.
+- Prefer small files that each solve one coherent task (KISS).
 - Validate required commands/files before critical actions.
 - Prefer clear error paths over silent partial behavior.
 - Keep comments focused on **why** a block exists.
@@ -59,7 +61,7 @@ Run these checks before opening a pull request:
 
 ```bash
 bash tests/smoke.sh
-for f in bin/*.sh lib/*.sh modules/gpu/template.sh tests/smoke.sh; do
+for f in $(find bin lib modules tests -type f -name "*.sh" | sort); do
   bash -n "$f"
 done
 bash bin/janus-vm.sh --help
@@ -83,9 +85,10 @@ When opening an issue, include:
 - CPU/GPU information;
 - command invoked and full output;
 - relevant Janus logs:
-  - `~/.cache/janus/last_check_*.log`
+  - `~/.cache/janus/logs/last_check_*.log`
   - `~/.cache/janus/logs/janus-bind_*.log`
-  - fallback path in restricted environments: `/tmp/janus/`.
+  - `~/.cache/janus/logs/janus.log`
+  - fallback path in restricted environments: `/tmp/janus/logs/`.
 
 ## Code of Conduct
 

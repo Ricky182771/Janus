@@ -2,119 +2,96 @@
 
 ## Purpose
 
-The `lib/` directory is the shared runtime layer for Janus shell tools.  
-Its goal is to centralize cross-cutting concerns (logging, reusable checks, parsing helpers) so scripts in `bin/` and modules in `modules/` stay small and deterministic.
+The `lib/` tree is the modular runtime layer for Janus shell commands.
 
-In the current phase, `lib/` provides a single library:
+Primary goals:
 
-- `janus-log.sh`: standard logging contract for scripts and modules.
+- keep `bin/*.sh` entrypoints thin;
+- isolate each responsibility in small, focused scripts;
+- centralize cross-cutting runtime concerns (logging, paths, root gates, prompts).
 
-## Design Rationale
+## Current Structure
 
-Janus favors transparent and idempotent orchestration. Shared libraries in `lib/` exist to:
+```text
+lib/
+  core/runtime/
+    paths.sh      Writable path resolution with fallback handling.
+    logging.sh    Shared log API + session log routing.
+    safety.sh     Interactive confirmation and root helpers.
 
-- avoid copy/paste utility logic between scripts;
-- keep output format stable across commands;
-- make future module behavior observable and debuggable.
+  init/
+    cli/          janus-init argument handling.
+    core/         janus-init shared context/state.
+    steps/        janus-init workflow steps.
+    main.sh       janus-init orchestration entry.
 
-## Loading Model
+  check/
+    cli/          janus-check argument handling.
+    core/         janus-check counters/state.
+    probes/       diagnostics by category.
+    main.sh       janus-check orchestration entry.
 
-`janus-log.sh` uses a guard variable:
+  bind/
+    cli/          janus-bind argument handling.
+    core/         bind context + low-level helpers.
+    ops/          list/resolve/safety/apply operations.
+    main.sh       janus-bind orchestration entry.
 
-- `JANUS_LOG_LIB_LOADED`
+  vm/
+    cli/          janus-vm CLI + guided wizard.
+    core/         vm context/helpers/validation.
+    xml/          XML block builders and renderer.
+    storage/      unattended media generation.
+    actions/      create/start/stop/status workflows.
+    main.sh       janus-vm orchestration entry.
 
-This prevents duplicate function redefinitions when the library is sourced more than once in a process.
-
-Example:
-
-```bash
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../lib/janus-log.sh"
+  janus-log.sh    Backward-compatible logging entrypoint.
 ```
 
-## Logging API Contract
+## Logging Contract
 
-Primary API:
+`lib/core/runtime/logging.sh` provides:
 
-- `janus_log LEVEL "message"`
+- standardized log API (`janus_log`, `janus_log_info`, etc.);
+- per-command log files with timestamp;
+- centralized append-only `janus.log`.
 
-Helper wrappers:
+Default log target:
 
-- `janus_log_info`
-- `janus_log_ok`
-- `janus_log_warn`
-- `janus_log_error`
-- `janus_log_critical`
-- `janus_log_debug`
+- `~/.cache/janus/logs/`
 
-Supported levels:
+Fallback when unavailable:
 
-- `INFO`, `OK`, `WARN`, `ERROR`, `CRITICAL`, `DEBUG`
+- `/tmp/janus/logs/`
 
-Color behavior:
+Each command writes to both:
 
-- Colors are enabled by default.
-- Color mapping is handled by `janus_log_color`.
-- Output format with color: `[LEVEL] message`.
+- command-specific log (for traceability);
+- `janus.log` (for chronological cross-command analysis).
 
-## Environment Knobs
+## Runtime Safety Contract
 
-The logger currently supports:
+`lib/core/runtime/safety.sh` provides:
 
-- `JANUS_LOG_ENABLE_COLOR` (default: `1`)
-  - `1`: colored output
-  - `0`: plain text output
-
-Example:
-
-```bash
-JANUS_LOG_ENABLE_COLOR=0 bash bin/janus-check.sh --version
-```
-
-## Usage Patterns
-
-### From `bin/` scripts
-
-```bash
-source "$SCRIPT_DIR/../lib/janus-log.sh"
-janus_log INFO "Running diagnostics"
-```
-
-### From `modules/`
-
-```bash
-source "$SCRIPT_DIR/../../lib/janus-log.sh"
-janus_log WARN "Module entered degraded mode"
-```
-
-## Conventions For New Libraries
-
-When adding files under `lib/`:
-
-1. Use `set -u` safe code (no implicit globals).
-2. Export only intentional function names.
-3. Add a load guard variable (`*_LIB_LOADED`).
-4. Keep side effects minimal (no automatic system mutation on source).
-5. Document every public function in this README or a sibling doc.
+- `janus_confirm` (safe yes/no prompts);
+- `janus_require_root` (explicit privilege guard);
+- `janus_has_flag` (thin wrapper-friendly flag detection).
 
 ## Backward Compatibility
 
-The `janus_log` API is treated as a compatibility contract for Janus scripts and modules in this phase.
+`lib/janus-log.sh` remains a compatibility shim so existing module code can still do:
 
-- New helper functions may be added.
-- Existing function names and basic output shape should remain stable.
-- Breaking changes should be documented in `README.md` and `CONTRIBUTING.md`.
+```bash
+source ".../lib/janus-log.sh"
+janus_log INFO "message"
+```
 
-## Extension Guidelines
+without knowing internal runtime path changes.
 
-Recommended near-term additions to `lib/`:
+## Design Rules
 
-- command/dependency helpers;
-- argument parsing helpers;
-- shared filesystem/state path helpers.
-
-Each new helper should include:
-
-- clear function contract;
-- failure semantics (return code vs hard exit);
-- at least one usage example.
+1. One file = one coherent responsibility.
+2. New helpers go to `lib/core/runtime/` only when reused by multiple commands.
+3. Command-specific logic belongs under `lib/<command>/`.
+4. Keep public functions documented with short, direct comments in English.
+5. Maintain non-destructive defaults unless explicitly in apply mode.

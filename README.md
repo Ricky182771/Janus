@@ -30,7 +30,9 @@ Implemented commands:
 
 Implemented architecture scaffolding:
 
-- `lib/janus-log.sh`: shared logging contract.
+- `lib/core/runtime/`: shared runtime helpers (paths, logging, prompts, root-gating).
+- `lib/check/`, `lib/init/`, `lib/bind/`, `lib/vm/`: modular command implementations grouped by function category.
+- `lib/janus-log.sh`: compatibility entrypoint for shared logging API.
 - `templates/libvirt/windows-base.xml`: baseline Windows VM template with injectable blocks for ISO, display stack, and GPU passthrough hostdev entries.
 - `modules/gpu/template.sh`: baseline module lifecycle template.
 - `modules/README.md`: module lifecycle and quality contract.
@@ -48,8 +50,13 @@ Still in roadmap:
 ## Repository Map
 
 ```text
-bin/                User-facing commands (check/init/bind/vm)
-lib/                Shared script libraries (logging contract)
+bin/                Thin user-facing wrappers (delegate to lib/)
+lib/core/runtime/   Shared runtime/logging/safety helpers
+lib/check/          Modular janus-check implementation
+lib/init/           Modular janus-init implementation
+lib/bind/           Modular janus-bind implementation
+lib/vm/             Modular janus-vm implementation
+lib/janus-log.sh    Backward-compatible logging entrypoint
 templates/libvirt/  Libvirt XML templates (single base + injected blocks)
 modules/            Hardware/module scaffolding and templates
 tests/              Smoke validation scripts
@@ -88,7 +95,8 @@ mkdir -p "$HOME"
 bash bin/janus-check.sh --no-interactive
 bash bin/janus-bind.sh --list
 bash bin/janus-bind.sh --device 0000:03:00.0 --dry-run --yes
-bash bin/janus-vm.sh create --name win11 --mode base
+bash bin/janus-vm.sh create --name win11 --guided
+bash bin/janus-vm.sh create --name win11 --mode passthrough --gpu 0000:03:00.0 --gpu-audio 0000:03:00.1 --yes --no-guided
 ```
 
 Notes:
@@ -96,6 +104,44 @@ Notes:
 - `janus-bind` defaults to dry-run.
 - `--apply` requires explicit opt-in and root privileges.
 - Running with temporary `HOME` isolates Janus state from your real profile.
+- Runtime logs are written to both command logs and `~/.cache/janus/logs/janus.log` (fallback: `/tmp/janus/logs/janus.log`).
+- Thin wrappers in `bin/` perform early root gating for mutating flows (`--apply`, `--rollback`, `--force`).
+- VM templates enable anti-detection defaults for guests (KVM hidden state + CPU `hypervisor` bit disabled).
+- `janus-vm create` runs guided by default when an interactive TTY is present.
+
+## GPU Passthrough VM Flow (QEMU + virt-manager)
+
+```bash
+# 1) Define VM from Janus template (and persist disk/NVRAM + libvirt define)
+bash bin/janus-vm.sh create \
+  --name win11-gpu \
+  --mode passthrough \
+  --gpu 0000:03:00.0 \
+  --gpu-audio 0000:03:00.1 \
+  --iso /var/lib/libvirt/boot/win11.iso \
+  --apply --yes
+
+# 2) Open VM in virt-manager for install/runtime management
+virt-manager --connect qemu:///system
+```
+
+The generated libvirt XML keeps VM-stealth defaults enabled by default for Windows guests.
+
+## Guided Creation Flow
+
+`janus-vm create --guided` now drives the full VM setup in 3 steps:
+
+1. ISO selection (installation media path).
+2. VM resources:
+   - RAM + CPU cores.
+   - Video profile:
+     - Passthrough (isolated secondary GPU), or
+     - Single-GPU with `shared-vram`, or
+     - Single-GPU `cpu-only` (no 3D acceleration).
+   - Storage backend:
+     - `file` (creates/uses QCOW2), or
+     - `block` (raw partition/real disk in `/dev/...`).
+3. Optional unattended Windows local account setup (`Autounattend.xml` + attached ISO).
 
 ## Documentation Entry Points
 
