@@ -108,4 +108,16 @@ if grep -q "Launching janus-init" "$TMP_HOME/janus-check-notty.log"; then
     fail "janus-check should not auto-launch janus-init when no interactive TTY is available."
 fi
 
+if ! bash "$ROOT_DIR/bin/janus-vm.sh" create --name smoke-auto-notty --mode base --single-gpu-mode cpu-only </dev/null >"$TMP_HOME/janus-vm-auto-notty.log" 2>&1; then
+    fail "janus-vm create (auto guided) should not fail when no interactive TTY is available."
+fi
+
+if bash "$ROOT_DIR/bin/janus-vm.sh" create --name smoke-guided-notty --guided </dev/null >"$TMP_HOME/janus-vm-guided-notty.log" 2>&1; then
+    fail "janus-vm --guided should fail when no interactive TTY is available."
+fi
+
+if ! grep -q -- "--guided requires an interactive TTY" "$TMP_HOME/janus-vm-guided-notty.log"; then
+    fail "Expected explicit guided no-TTY error message."
+fi
+
 echo "[OK] Smoke checks passed"

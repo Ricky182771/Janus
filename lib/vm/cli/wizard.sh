@@ -130,7 +130,7 @@ janus_vm_maybe_run_guided_create_wizard() {
 
     case "$JANUS_VM_GUIDED_MODE" in
         on)
-            janus_vm_is_interactive_tty || janus_vm_die "--guided requires an interactive TTY."
+            janus_vm_is_interactive_tty || janus_vm_die "--guided requires an interactive TTY (run in a terminal, or use --no-guided)."
             janus_vm_run_guided_create_wizard
             ;;
         off)

@@ -14,9 +14,10 @@ JANUS_RUNTIME_SAFETY_LOADED=1
 # shellcheck source=logging.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/logging.sh"
 
-# Return success when both stdin and stdout are interactive terminals.
+# Return success when input is interactive and at least one output stream is interactive.
+# This keeps prompts available when stdout is redirected (common in IDE/task runners).
 janus_is_interactive_tty() {
-    [ -t 0 ] && [ -t 1 ]
+    [ -t 0 ] && { [ -t 1 ] || [ -t 2 ]; }
 }
 
 # Prompt for confirmation with a safe default of "No".
