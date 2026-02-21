@@ -29,12 +29,17 @@ echo "[INFO] Syntax check"
 while IFS= read -r file; do
     bash -n "$file"
 done < <(find "$ROOT_DIR/bin" "$ROOT_DIR/lib" "$ROOT_DIR/modules" -type f -name "*.sh" | sort)
+bash -n "$ROOT_DIR/Janus.sh"
 
 echo "[INFO] Version/help checks"
 assert_zero bash "$ROOT_DIR/bin/janus-init.sh" --version
 assert_zero bash "$ROOT_DIR/bin/janus-check.sh" --version
 assert_zero bash "$ROOT_DIR/bin/janus-bind.sh" --help
 assert_zero bash "$ROOT_DIR/bin/janus-vm.sh" --help
+assert_zero bash "$ROOT_DIR/Janus.sh" --help
+assert_zero bash "$ROOT_DIR/Janus.sh" --list-languages
+assert_zero python3 "$ROOT_DIR/orchestrator/janus_tui.py" --list-languages
+assert_zero python3 -m py_compile "$ROOT_DIR/orchestrator/janus_tui.py"
 [ -f "$ROOT_DIR/docs/module-api.md" ] || fail "Missing docs/module-api.md"
 
 echo "[INFO] Module API v1 checks"

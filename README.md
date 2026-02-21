@@ -23,6 +23,7 @@ The project follows a "glass box" philosophy:
 
 Implemented commands:
 
+- `Janus.sh`: root-level interactive orchestrator with a Python terminal UI (guided setup, dependency install, VFIO + VM management).
 - `bin/janus-check.sh`: diagnostic checks for CPU virtualization, IOMMU, tooling, modules, hugepages, and GPU/IOMMU visibility.
 - `bin/janus-init.sh`: initializes Janus user config/state under `~/.config/janus` and cache/log paths.
 - `bin/janus-bind.sh`: lists devices, validates targets, runs dry-run summaries, and supports explicit apply/rollback flows.
@@ -35,6 +36,8 @@ Implemented architecture scaffolding:
 - `lib/modules/main.sh`: Module API v1 loader for discovery, validation, and hybrid execution (`source`/`subshell`).
 - `lib/janus-log.sh`: compatibility entrypoint for shared logging API.
 - `templates/libvirt/windows-base.xml`: baseline Windows VM template with injectable blocks for ISO, display stack, and GPU passthrough hostdev entries.
+- `orchestrator/janus_tui.py`: curses-based terminal orchestrator UI.
+- `languages/*.txt`: modular translation packs (currently English and Spanish).
 - `modules/gpu/template.sh`: baseline module lifecycle template.
 - `modules/README.md`: module architecture and contributor guide.
 - `docs/module-api.md`: formal Module API v1 contract.
@@ -44,7 +47,7 @@ Implemented architecture scaffolding:
 
 Still in roadmap:
 
-- full orchestrator command (`bin/janus`);
+- single unified `bin/janus` entrypoint parity (current orchestrator lives in `Janus.sh`);
 - VM lifecycle automation and profile orchestration;
 - Windows guest bridge agent and desktop integration layer;
 - libvirt XML templates and guest-side script bundles.
@@ -52,7 +55,10 @@ Still in roadmap:
 ## Repository Map
 
 ```text
+Janus.sh            Main interactive orchestrator launcher
 bin/                Thin user-facing wrappers (delegate to lib/)
+orchestrator/       Python terminal UI for end-to-end Janus workflows
+languages/          Community-editable language packs (.txt)
 lib/core/runtime/   Shared runtime/logging/safety helpers
 lib/check/          Modular janus-check implementation
 lib/init/           Modular janus-init implementation
@@ -80,7 +86,8 @@ Progress snapshot:
 - [x] Safe VFIO bind workflow (`janus-bind`)
 - [x] VM helper command and templates (`janus-vm`, `templates/libvirt/`)
 - [x] Module scaffolding (`lib/`, `modules/`)
-- [ ] Core orchestrator (`bin/janus`)
+- [x] Interactive terminal orchestrator (`Janus.sh` + Python TUI)
+- [ ] Core orchestrator parity in `bin/janus`
 - [ ] Guest bridge implementation
 - [ ] End-to-end VM profile lifecycle automation
 
@@ -96,6 +103,7 @@ bash tests/smoke.sh
 export HOME=/tmp/janus-lab
 mkdir -p "$HOME"
 
+bash Janus.sh --lang en
 bash bin/janus-check.sh --no-interactive
 bash bin/janus-bind.sh --list
 bash bin/janus-bind.sh --device 0000:03:00.0 --dry-run --yes
@@ -112,6 +120,7 @@ Notes:
 - Thin wrappers in `bin/` perform early root gating for mutating flows (`--apply`, `--rollback`, `--force`).
 - VM templates enable anti-detection defaults for guests (KVM hidden state + CPU `hypervisor` bit disabled).
 - `janus-vm create` runs guided by default when an interactive TTY is present.
+- `Janus.sh` provides an ordered host setup flow, distro-aware dependency install, and visual VM/VFIO control in terminal.
 
 ## GPU Passthrough VM Flow (QEMU + virt-manager)
 
