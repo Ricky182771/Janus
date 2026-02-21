@@ -35,6 +35,40 @@ assert_zero bash "$ROOT_DIR/bin/janus-init.sh" --version
 assert_zero bash "$ROOT_DIR/bin/janus-check.sh" --version
 assert_zero bash "$ROOT_DIR/bin/janus-bind.sh" --help
 assert_zero bash "$ROOT_DIR/bin/janus-vm.sh" --help
+[ -f "$ROOT_DIR/docs/module-api.md" ] || fail "Missing docs/module-api.md"
+
+echo "[INFO] Module API v1 checks"
+assert_zero bash "$ROOT_DIR/modules/gpu/template.sh" check
+assert_zero bash "$ROOT_DIR/modules/gpu/template.sh" apply
+assert_zero bash "$ROOT_DIR/modules/gpu/template.sh" rollback
+assert_zero bash "$ROOT_DIR/modules/gpu/template.sh" meta
+MODULE_META="$(bash "$ROOT_DIR/modules/gpu/template.sh" meta)"
+printf '%s\n' "$MODULE_META" | grep -q "^id=gpu-template$" || fail "Expected module metadata id=gpu-template"
+printf '%s\n' "$MODULE_META" | grep -q "^compat_api=1$" || fail "Expected module metadata compat_api=1"
+
+echo "[INFO] Module loader checks"
+assert_zero bash -c '
+set -euo pipefail
+JANUS_ROOT_DIR="$1"
+source "$JANUS_ROOT_DIR/lib/modules/main.sh"
+janus_module_load "$JANUS_ROOT_DIR/modules/gpu/template.sh"
+[ "$JANUS_MODULE_ID" = "gpu-template" ]
+[ "$JANUS_MODULE_COMPAT_API" = "1" ]
+janus_module_unload
+janus_module_run_action "$JANUS_ROOT_DIR/modules/gpu/template.sh" check
+JANUS_MODULE_EXEC_MODE=subshell
+janus_module_run_action "$JANUS_ROOT_DIR/modules/gpu/template.sh" check
+' _ "$ROOT_DIR"
+
+MODULE_DISCOVERY="$(
+    bash -c '
+set -euo pipefail
+JANUS_ROOT_DIR="$1"
+source "$JANUS_ROOT_DIR/lib/modules/main.sh"
+janus_modules_discover
+' _ "$ROOT_DIR"
+)"
+printf '%s\n' "$MODULE_DISCOVERY" | grep -q "^id=gpu-template$" || fail "Expected module discovery to include gpu-template"
 
 echo "[INFO] Error-path checks"
 assert_nonzero bash "$ROOT_DIR/bin/janus-init.sh" --invalid

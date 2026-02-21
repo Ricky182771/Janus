@@ -29,15 +29,23 @@ Current contribution-friendly areas:
 Before coding, read:
 
 - `modules/README.md` (module lifecycle contract)
+- `docs/module-api.md` (formal Module API v1 contract)
 - `lib/README.md` (shared library and logging contract)
 
 ### Module contract
 
 Each module must implement:
 
-- `check_capability`
-- `apply_config`
-- `rollback`
+- `janus_module_check`
+- `janus_module_apply`
+- `janus_module_rollback`
+
+Each module must declare:
+
+- `JANUS_MODULE_TYPE`
+- `JANUS_MODULE_ID`
+- `JANUS_MODULE_VERSION`
+- `JANUS_MODULE_COMPAT_API`
 
 Use `modules/gpu/template.sh` as baseline.
 

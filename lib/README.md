@@ -45,6 +45,9 @@ lib/
     actions/      create/start/stop/status workflows.
     main.sh       janus-vm orchestration entry.
 
+  modules/
+    main.sh       Module API v1 loader (discover/load/run actions).
+
   janus-log.sh    Backward-compatible logging entrypoint.
 ```
 
@@ -87,6 +90,14 @@ janus_log INFO "message"
 ```
 
 without knowing internal runtime path changes.
+
+## Module Loader Contract
+
+`lib/modules/main.sh` provides:
+
+- API validation for `JANUS_MODULE_*` metadata and `janus_module_*` lifecycle functions;
+- module discovery helpers (`janus_modules_find`, `janus_modules_discover`);
+- hybrid execution (`source` or `subshell`) via `JANUS_MODULE_EXEC_MODE`.
 
 ## Design Rules
 

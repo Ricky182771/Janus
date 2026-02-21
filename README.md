@@ -32,10 +32,12 @@ Implemented architecture scaffolding:
 
 - `lib/core/runtime/`: shared runtime helpers (paths, logging, prompts, root-gating).
 - `lib/check/`, `lib/init/`, `lib/bind/`, `lib/vm/`: modular command implementations grouped by function category.
+- `lib/modules/main.sh`: Module API v1 loader for discovery, validation, and hybrid execution (`source`/`subshell`).
 - `lib/janus-log.sh`: compatibility entrypoint for shared logging API.
 - `templates/libvirt/windows-base.xml`: baseline Windows VM template with injectable blocks for ISO, display stack, and GPU passthrough hostdev entries.
 - `modules/gpu/template.sh`: baseline module lifecycle template.
-- `modules/README.md`: module lifecycle and quality contract.
+- `modules/README.md`: module architecture and contributor guide.
+- `docs/module-api.md`: formal Module API v1 contract.
 - `tests/smoke.sh`: non-destructive smoke checks.
 
 ## What Is Not Implemented Yet
@@ -56,9 +58,11 @@ lib/check/          Modular janus-check implementation
 lib/init/           Modular janus-init implementation
 lib/bind/           Modular janus-bind implementation
 lib/vm/             Modular janus-vm implementation
+lib/modules/        Module API loader and discovery helpers
 lib/janus-log.sh    Backward-compatible logging entrypoint
 templates/libvirt/  Libvirt XML templates (single base + injected blocks)
 modules/            Hardware/module scaffolding and templates
+docs/               API and architecture documentation
 tests/              Smoke validation scripts
 README.md           Project overview and current scope
 CONTRIBUTING.md     Contributor workflow and quality gates
@@ -146,6 +150,7 @@ The generated libvirt XML keeps VM-stealth defaults enabled by default for Windo
 ## Documentation Entry Points
 
 - Module architecture: `modules/README.md`
+- Module API v1: `docs/module-api.md`
 - Shared library contract: `lib/README.md`
 - Contribution process: `CONTRIBUTING.md`
 

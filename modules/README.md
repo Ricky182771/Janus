@@ -11,6 +11,12 @@ Modules are expected to be:
 - transparent (clear logs, explicit failures);
 - rollback-capable when they modify runtime state.
 
+## Contract Source Of Truth
+
+Formal module contract is defined in `docs/module-api.md` (Module API v1).
+
+This file focuses on architecture and contributor workflow around that contract.
+
 ## Directory Strategy
 
 Current structure:
@@ -24,31 +30,39 @@ Growth path:
 - Keep each module responsible for one coherent capability.
 - Prefer small composable modules over monolithic scripts.
 
-## Module Lifecycle Contract
+## Module API v1 At A Glance
 
-Every module must implement these entrypoints:
+Every module must define metadata variables:
 
-1. `check_capability`
-2. `apply_config`
-3. `rollback`
+- `JANUS_MODULE_TYPE`
+- `JANUS_MODULE_ID`
+- `JANUS_MODULE_VERSION`
+- `JANUS_MODULE_COMPAT_API`
 
-### `check_capability`
+Every module must implement these lifecycle functions:
 
-- Validates whether the host/hardware matches module assumptions.
-- Must not mutate system state.
-- Returns `0` if compatible, non-zero if incompatible.
+1. `janus_module_check`
+2. `janus_module_apply`
+3. `janus_module_rollback`
 
-### `apply_config`
+Legacy aliases are still accepted for backward compatibility:
 
-- Applies module-specific runtime configuration.
-- Must log intent and outcome for each critical step.
-- Should fail fast on critical errors.
+- `check_capability`
+- `apply_config`
+- `rollback`
 
-### `rollback`
+## Execution Modes
 
-- Reverts side effects produced by `apply_config`.
-- Must be safe to run even after partial apply failures.
-- Should log what was restored and what could not be restored.
+Janus supports a hybrid execution strategy through `lib/modules/main.sh`:
+
+- `source` mode (`JANUS_MODULE_EXEC_MODE=source`):
+  - loads module as a library;
+  - enables deep integration with orchestrator context.
+- `subshell` mode (`JANUS_MODULE_EXEC_MODE=subshell`):
+  - executes module action in a separate process;
+  - provides stronger isolation from caller state.
+
+Use `subshell` mode for untrusted/community modules when isolation is preferred.
 
 ## Execution Semantics
 
@@ -60,9 +74,9 @@ Recommended return code policy:
 
 Runtime guarantees:
 
-- Re-running `check_capability` should not change machine state.
-- Re-running `apply_config` should not duplicate persistent side effects.
-- `rollback` should be best-effort but explicit about incomplete restores.
+- Re-running `janus_module_check` should not change machine state.
+- Re-running `janus_module_apply` should not duplicate persistent side effects.
+- `janus_module_rollback` should be best-effort but explicit about incomplete restores.
 
 ## Observability / Logging Requirements
 
@@ -107,9 +121,10 @@ Warn and continue when:
 
 Use `modules/gpu/template.sh` as the baseline implementation.
 
-- `check` command -> `check_capability`
-- `apply` command -> `apply_config`
-- `rollback` command -> `rollback`
+- `check` command -> `janus_module_check`
+- `apply` command -> `janus_module_apply`
+- `rollback` command -> `janus_module_rollback`
+- `meta` command -> machine-readable metadata
 
 Command examples:
 
@@ -117,15 +132,25 @@ Command examples:
 bash modules/gpu/template.sh check
 bash modules/gpu/template.sh apply
 bash modules/gpu/template.sh rollback
+bash modules/gpu/template.sh meta
+```
+
+Library mode examples:
+
+```bash
+source lib/modules/main.sh
+janus_module_run_action modules/gpu/template.sh check
+janus_modules_discover
 ```
 
 ## Module Quality Checklist
 
 Before proposing a module:
 
-1. Implements all three lifecycle functions.
-2. Uses `lib/janus-log.sh` for operational logs.
-3. Has explicit validation for required commands/files/interfaces.
-4. Has deterministic behavior on repeated runs.
-5. Supports rollback for all `apply_config` side effects.
-6. Passes repository smoke validation (`bash tests/smoke.sh`).
+1. Declares all required metadata fields.
+2. Implements all three `janus_module_*` lifecycle functions.
+3. Uses `lib/janus-log.sh` for operational logs.
+4. Has explicit validation for required commands/files/interfaces.
+5. Has deterministic behavior on repeated runs.
+6. Supports rollback for all `janus_module_apply` side effects.
+7. Passes repository smoke validation (`bash tests/smoke.sh`).
