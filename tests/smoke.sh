@@ -117,12 +117,31 @@ if ! bash "$ROOT_DIR/bin/janus-vm.sh" create --name smoke-auto-notty --mode base
     fail "janus-vm create (auto guided) should not fail when no interactive TTY is available."
 fi
 
-if bash "$ROOT_DIR/bin/janus-vm.sh" create --name smoke-guided-notty --guided </dev/null >"$TMP_HOME/janus-vm-guided-notty.log" 2>&1; then
-    fail "janus-vm --guided should fail when no interactive TTY is available."
+if ! bash "$ROOT_DIR/bin/janus-vm.sh" create --name smoke-guided-notty --guided </dev/null >"$TMP_HOME/janus-vm-guided-notty.log" 2>&1; then
+    fail "janus-vm --guided should auto-adapt when no interactive TTY is available."
 fi
 
-if ! grep -q -- "--guided requires an interactive TTY" "$TMP_HOME/janus-vm-guided-notty.log"; then
-    fail "Expected explicit guided no-TTY error message."
+if ! grep -Eq -- "Forcing pseudo-TTY|switching --guided to --no-guided|continuing with --no-guided" "$TMP_HOME/janus-vm-guided-notty.log"; then
+    fail "Expected explicit no-TTY guided fallback messaging."
+fi
+
+if ! bash -c '
+set -euo pipefail
+ROOT="$1"
+source "$ROOT/lib/tty.sh"
+PATH="/tmp"
+if ensure_tty bash -c "exit 7" </dev/null; then
+    exit 1
+else
+    rc=$?
+fi
+[ "$rc" -eq "$JANUS_TTY_UNAVAILABLE_RC" ]
+' _ "$ROOT_DIR"; then
+    fail "ensure_tty should return JANUS_TTY_UNAVAILABLE_RC when no TTY and no script are available."
+fi
+
+if ! bash "$ROOT_DIR/Janus.sh" </dev/null >"$TMP_HOME/janus-orchestrator-notty.log" 2>&1; then
+    fail "Janus.sh should degrade gracefully when no interactive TTY is available."
 fi
 
 echo "[OK] Smoke checks passed"

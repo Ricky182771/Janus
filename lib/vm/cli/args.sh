@@ -30,7 +30,7 @@ Core options:
 
 Create options:
   --mode MODE             base|passthrough (default: base)
-  --guided                Force guided create wizard (interactive)
+  --guided                Force guided create wizard (auto-fallback in no-TTY runs)
   --no-guided             Disable guided create wizard
   --memory-mib N          RAM in MiB (default: 16384)
   --vcpus N               vCPU count (default: 8)

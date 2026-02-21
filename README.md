@@ -28,6 +28,7 @@ Implemented commands:
 - `bin/janus-init.sh`: initializes Janus user config/state under `~/.config/janus` and cache/log paths.
 - `bin/janus-bind.sh`: lists devices, validates targets, runs dry-run summaries, and supports explicit apply/rollback flows.
 - `bin/janus-vm.sh`: creates VM definitions from templates and manages VM lifecycle (`create/start/stop/status`).
+- `lib/tty.sh`: reusable `ensure_tty` helper with pseudo-TTY fallback for non-interactive launchers.
 
 Implemented architecture scaffolding:
 
@@ -120,7 +121,9 @@ Notes:
 - Thin wrappers in `bin/` perform early root gating for mutating flows (`--apply`, `--rollback`, `--force`).
 - VM templates enable anti-detection defaults for guests (KVM hidden state + CPU `hypervisor` bit disabled).
 - `janus-vm create` runs guided by default when an interactive TTY is present.
+- Interactive wrappers auto-adapt to no-TTY runs: they try pseudo-TTY via `script`, then fall back to non-interactive flags when needed.
 - `Janus.sh` provides an ordered host setup flow, distro-aware dependency install, and visual VM/VFIO control in terminal.
+- `Janus.sh` attempts pseudo-TTY when launched headless and falls back to a safe headless mode if pseudo-TTY is unavailable.
 
 ## GPU Passthrough VM Flow (QEMU + virt-manager)
 

@@ -18,6 +18,7 @@ lib/
     paths.sh      Writable path resolution with fallback handling.
     logging.sh    Shared log API + session log routing.
     safety.sh     Interactive confirmation and root helpers.
+    tty.sh        ensure_tty pseudo-TTY fallback helper.
 
   init/
     cli/          janus-init argument handling.
@@ -49,6 +50,7 @@ lib/
     main.sh       Module API v1 loader (discover/load/run actions).
 
   janus-log.sh    Backward-compatible logging entrypoint.
+  tty.sh          Backward-compatible shim for runtime tty helpers.
 ```
 
 ## Logging Contract
@@ -79,6 +81,11 @@ Each command writes to both:
 - `janus_confirm` (safe yes/no prompts);
 - `janus_require_root` (explicit privilege guard);
 - `janus_has_flag` (thin wrapper-friendly flag detection).
+
+`lib/core/runtime/tty.sh` provides:
+
+- `ensure_tty` (executes commands directly on real TTY, or through pseudo-TTY fallback);
+- `JANUS_TTY_UNAVAILABLE_RC` (return code signaling no TTY + no `script` support).
 
 ## Backward Compatibility
 
