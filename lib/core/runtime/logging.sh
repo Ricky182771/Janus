@@ -62,6 +62,7 @@ janus_log_debug() { janus_log DEBUG "$*"; }
 janus_runtime_start_logging() {
     local prefix="$1"
     local log_dir=""
+    local tee_pid=""
 
     [ -n "$prefix" ] || prefix="janus"
     log_dir="$(janus_runtime_resolve_log_dir)" || {
@@ -72,8 +73,24 @@ janus_runtime_start_logging() {
     JANUS_LOG_FILE="$log_dir/${prefix}_$(date +%Y%m%d_%H%M%S).log"
     JANUS_MAIN_LOG_FILE="$log_dir/janus.log"
 
+    if ! command -v tee >/dev/null 2>&1; then
+        echo "[ERROR] 'tee' is required for logging but was not found." >&2
+        return 1
+    fi
+
+    if ! touch "$JANUS_LOG_FILE" 2>/dev/null || ! touch "$JANUS_MAIN_LOG_FILE" 2>/dev/null; then
+        echo "[ERROR] Unable to create log files in $log_dir." >&2
+        return 1
+    fi
+
     # Route all command output to terminal and both log files.
     exec > >(tee -a "$JANUS_LOG_FILE" "$JANUS_MAIN_LOG_FILE") 2>&1
+    tee_pid=$!
+
+    if [ -n "$tee_pid" ] && ! kill -0 "$tee_pid" 2>/dev/null; then
+        echo "[ERROR] Log pipe process failed to start." >&2
+        return 1
+    fi
 
     export JANUS_LOG_FILE
     export JANUS_MAIN_LOG_FILE

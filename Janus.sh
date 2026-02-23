@@ -36,6 +36,12 @@ if ! command -v python3 >/dev/null 2>&1; then
     exit 1
 fi
 
+JANUS_PY_VERSION="$(python3 -c 'import sys; print(sys.version_info >= (3, 7))' 2>/dev/null || true)"
+if [ "$JANUS_PY_VERSION" != "True" ]; then
+    printf '[ERROR] python3 >= 3.7 is required. Found: %s\n' "$(python3 --version 2>&1)" >&2
+    exit 1
+fi
+
 if [ ! -f "$TTY_LIB" ]; then
     printf '[ERROR] Missing TTY helper module: %s\n' "$TTY_LIB" >&2
     exit 1

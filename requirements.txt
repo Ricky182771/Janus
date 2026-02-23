@@ -1,0 +1,8 @@
+# Janus Python Dependencies
+#
+# The interactive orchestrator (orchestrator/janus_tui.py) currently uses only
+# Python standard library modules (curses, argparse, subprocess, pathlib, etc.).
+#
+# This file exists as a placeholder so tooling and contributors know the
+# dependency surface is intentionally zero.  Add third-party packages here
+# if any are introduced in the future.

@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: Run ShellCheck on all shell scripts
+        run: |
+          find bin/ lib/ modules/ tests/ -type f -name '*.sh' -print0 \
+            | xargs -0 shellcheck --severity=warning --shell=bash
+          shellcheck --severity=warning --shell=bash Janus.sh
+
+  syntax:
+    name: Bash & Python syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bash syntax check
+        run: |
+          find bin/ lib/ modules/ tests/ -type f -name '*.sh' -print0 \
+            | xargs -0 -I{} bash -n {}
+          bash -n Janus.sh
+
+      - name: Python compile check
+        run: python3 -m py_compile orchestrator/janus_tui.py
+
+  smoke:
+    name: Smoke tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run smoke tests
+        run: bash tests/smoke.sh
+
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run unit tests
+        run: bash tests/unit.sh

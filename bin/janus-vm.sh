@@ -7,7 +7,7 @@
 # It performs early root gating for explicitly mutating operations.
 # ----------------------------------------------------------------------------
 
-set -uo pipefail
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export JANUS_ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"

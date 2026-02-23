@@ -742,7 +742,18 @@ def validate_entrypoints() -> List[str]:
     return missing
 
 
+MIN_PYTHON = (3, 7)
+
+
 def main() -> int:
+    if sys.version_info < MIN_PYTHON:
+        print(
+            f"[ERROR] Python {MIN_PYTHON[0]}.{MIN_PYTHON[1]}+ required, "
+            f"found {sys.version}",
+            file=sys.stderr,
+        )
+        return 1
+
     args = parse_args()
 
     bundles = load_languages()

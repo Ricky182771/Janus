@@ -6,7 +6,7 @@
 # This thin entrypoint delegates to modular implementation under lib/init/.
 # ----------------------------------------------------------------------------
 
-set -uo pipefail
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export JANUS_ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
