@@ -14,10 +14,13 @@ JANUS_RUNTIME_SAFETY_LOADED=1
 # shellcheck source=logging.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/logging.sh"
 
-# Return success when input is interactive and at least one output stream is interactive.
-# This keeps prompts available when stdout is redirected (common in IDE/task runners).
+# Return success when input is interactive and at least one output stream is
+# (or was) interactive.  After janus_runtime_start_logging redirects stdout/
+# stderr through tee, [ -t 1 ] and [ -t 2 ] become false even in real
+# terminals.  JANUS_STDOUT_WAS_TTY captures the original state so prompts,
+# wizards, and confirmations keep working after logging starts.
 janus_is_interactive_tty() {
-    [ -t 0 ] && { [ -t 1 ] || [ -t 2 ]; }
+    [ -t 0 ] && { [ -t 1 ] || [ -t 2 ] || [ "${JANUS_STDOUT_WAS_TTY:-0}" = "1" ]; }
 }
 
 # Prompt for confirmation with a safe default of "No".

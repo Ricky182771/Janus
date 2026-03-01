@@ -83,6 +83,17 @@ janus_runtime_start_logging() {
         return 1
     fi
 
+    # Cache original TTY state before exec redirect replaces stdout/stderr
+    # with pipes.  Without this, [ -t 1 ] / [ -t 2 ] return false after the
+    # redirect and janus_is_interactive_tty breaks for all callers (e.g. the
+    # guided VM wizard).
+    if [ -t 1 ] || [ -t 2 ]; then
+        JANUS_STDOUT_WAS_TTY=1
+    else
+        JANUS_STDOUT_WAS_TTY="${JANUS_STDOUT_WAS_TTY:-0}"
+    fi
+    export JANUS_STDOUT_WAS_TTY
+
     # Route all command output to terminal and both log files.
     exec > >(tee -a "$JANUS_LOG_FILE" "$JANUS_MAIN_LOG_FILE") 2>&1
     tee_pid=$!
