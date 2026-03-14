@@ -683,16 +683,44 @@ class JanusTUI:
             return None
         return name
 
+    def _launch_vm_viewer(self, name: str) -> None:
+        """Open the VM graphical console in the background."""
+        viewer_cmd: Optional[List[str]] = None
+
+        if shutil.which("virt-manager"):
+            viewer_cmd = [
+                "virt-manager",
+                "--connect", "qemu:///system",
+                "--show-domain-console", name,
+            ]
+        elif shutil.which("virt-viewer"):
+            viewer_cmd = [
+                "virt-viewer",
+                "--connect", "qemu:///system",
+                "--wait", name,
+            ]
+
+        if viewer_cmd is None:
+            self.status = self.t("status_no_viewer")
+            return
+
+        try:
+            subprocess.Popen(
+                viewer_cmd,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+        except OSError:
+            self.status = self.t("status_no_viewer")
+
     def action_vm_start(self) -> None:
         name = self.ask_vm_name("vm_action_start")
         if not name:
             return
         ok = self.run_shell_command(["bash", str(BIN_DIR / "janus-vm.sh"), "start", "--name", name])
-        if ok and shutil.which("virt-viewer"):
-            self.run_shell_command(
-                ["virt-viewer", "--connect", "qemu:///system", "--wait", name],
-                pause=False,
-            )
+        if ok:
+            self._launch_vm_viewer(name)
 
     def action_vm_stop(self) -> None:
         name = self.ask_vm_name("vm_action_stop")

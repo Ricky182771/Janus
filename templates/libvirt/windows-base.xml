@@ -44,7 +44,7 @@ __UNATTEND_DEVICE_BLOCK__
     <controller type='virtio-serial' index='0'/>
     <interface type='network'>
       <source network='__NETWORK_NAME__'/>
-      <model type='virtio'/>
+      <model type='e1000e'/>
     </interface>
     <input type='tablet' bus='usb'/>
     <input type='keyboard' bus='ps2'/>

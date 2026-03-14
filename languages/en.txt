@@ -7,6 +7,7 @@ status_ready=Ready.
 status_done=Last command finished successfully.
 status_failed=Last command failed (exit code: {code}).
 status_language_switched=Language changed to {lang}.
+status_no_viewer=No VM viewer found (install virt-manager or virt-viewer).
 prompt_title=Input
 prompt_enter_to_continue=Press Enter to continue...
 prompt_yes_no_default_yes=[Y/n]
