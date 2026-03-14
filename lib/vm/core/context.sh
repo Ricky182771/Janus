@@ -16,11 +16,19 @@ JANUS_VM_VERSION="0.2"
 JANUS_VM_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 JANUS_VM_TEMPLATE_DIR="$JANUS_ROOT_DIR/templates/libvirt"
 
-JANUS_VM_CONFIG_DIR="$HOME/.config/janus/vm"
-JANUS_VM_DEF_DIR="$JANUS_VM_CONFIG_DIR/definitions"
-JANUS_VM_NVRAM_DIR="$JANUS_VM_CONFIG_DIR/nvram"
-JANUS_VM_UNATTEND_DIR="$JANUS_VM_CONFIG_DIR/unattend"
-JANUS_VM_DEFAULT_DISK_DIR="$HOME/.local/share/janus/vms"
+# Resolve the real (non-root) user's home to avoid placing files under /root/
+# when the script is invoked via sudo.
+JANUS_VM_REAL_HOME="$(getent passwd "${SUDO_USER:-$USER}" 2>/dev/null | cut -d: -f6)"
+: "${JANUS_VM_REAL_HOME:=$HOME}"
+
+JANUS_VM_HOME_DIR="$JANUS_VM_REAL_HOME/Janus VMs"
+
+# Per-VM directories — these are placeholders that janus_vm_resolve_vm_dirs
+# overwrites once the final VM name is known (after args/wizard parsing).
+JANUS_VM_DEF_DIR=""
+JANUS_VM_NVRAM_DIR=""
+JANUS_VM_UNATTEND_DIR=""
+JANUS_VM_DEFAULT_DISK_DIR=""
 
 JANUS_VM_ACTION=""
 JANUS_VM_NAME="janus-win11"

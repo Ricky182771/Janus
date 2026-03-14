@@ -11,6 +11,38 @@ if [ -n "${JANUS_VM_ACTION_CREATE_LOADED:-}" ]; then
 fi
 JANUS_VM_ACTION_CREATE_LOADED=1
 
+# Grant the libvirt QEMU process read/write access to a VM artifact file
+# via POSIX ACLs.  The file stays owned by the real (non-root) user so they
+# can manage it without sudo.
+janus_vm_fix_artifact_permissions() {
+    local file="$1"
+    local real_user="${SUDO_USER:-$USER}"
+
+    [ -e "$file" ] || return 0
+
+    # Ensure the real user owns the file.
+    chown "${real_user}:${real_user}" "$file" 2>/dev/null || true
+    chmod 660 "$file" 2>/dev/null || true
+
+    # Grant libvirt-qemu read/write via ACL.
+    if command -v setfacl >/dev/null 2>&1; then
+        setfacl -m "u:libvirt-qemu:rw" "$file" 2>/dev/null \
+            || janus_vm_log_warn "Unable to set ACL for libvirt-qemu on $file"
+
+        # Ensure parent directories are traversable by libvirt-qemu.
+        local dir
+        dir="$(dirname "$file")"
+        while [ "$dir" != "/" ] && [ "$dir" != "$JANUS_VM_REAL_HOME" ]; do
+            setfacl -m "u:libvirt-qemu:x" "$dir" 2>/dev/null || true
+            dir="$(dirname "$dir")"
+        done
+        # Also grant on the real home directory itself.
+        setfacl -m "u:libvirt-qemu:x" "$JANUS_VM_REAL_HOME" 2>/dev/null || true
+    else
+        janus_vm_log_warn "setfacl not found; install acl to grant libvirt-qemu access to $file"
+    fi
+}
+
 # Create or define a VM from the Janus template.
 janus_vm_create() {
     local def_file="$JANUS_VM_DEF_DIR/${JANUS_VM_NAME}.xml"
@@ -75,6 +107,7 @@ janus_vm_create() {
         else
             janus_vm_log_info "Disk already exists: $JANUS_VM_DISK_PATH"
         fi
+        janus_vm_fix_artifact_permissions "$JANUS_VM_DISK_PATH"
     else
         [ -b "$JANUS_VM_DISK_PATH" ] || janus_vm_die "Configured raw disk is not a block device: $JANUS_VM_DISK_PATH"
         janus_vm_log_info "Using block device disk: $JANUS_VM_DISK_PATH"
@@ -86,6 +119,7 @@ janus_vm_create() {
     else
         janus_vm_log_info "NVRAM file already exists: $nvram_path"
     fi
+    janus_vm_fix_artifact_permissions "$nvram_path"
 
     if [ "$JANUS_VM_UNATTENDED_ENABLED" -eq 1 ]; then
         janus_vm_write_unattend_xml_file "$unattended_xml_path"

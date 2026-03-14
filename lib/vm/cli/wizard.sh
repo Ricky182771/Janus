@@ -35,6 +35,10 @@ janus_vm_run_guided_create_wizard() {
     printf '=== Janus VM Create Wizard ===\n'
 
     printf '\n'
+    janus_vm_prompt_with_default "VM name" "$JANUS_VM_NAME" JANUS_VM_NAME
+    janus_vm_resolve_vm_dirs
+
+    printf '\n'
     printf '[1/3] Installation ISO\n'
     janus_vm_prompt_with_default "Windows ISO path (empty to skip)" "$JANUS_VM_ISO_PATH" JANUS_VM_ISO_PATH
 

@@ -349,10 +349,15 @@ class JanusTUI:
         return self.run_shell_command(["sudo", "-v"], pause=False)
 
     def known_vm_names(self) -> List[str]:
-        vm_def_dir = Path.home() / ".config" / "janus" / "vm" / "definitions"
-        if not vm_def_dir.is_dir():
+        vm_home = Path.home() / "Janus VMs"
+        if not vm_home.is_dir():
             return []
-        names = [path.stem for path in sorted(vm_def_dir.glob("*.xml"))]
+        names: List[str] = []
+        for child in sorted(vm_home.iterdir()):
+            if child.is_dir():
+                xml = child / f"{child.name}.xml"
+                if xml.is_file():
+                    names.append(child.name)
         return names
 
     def select_from_values(self, title: str, options: Sequence[Tuple[str, str]]) -> Optional[str]:
@@ -643,7 +648,7 @@ class JanusTUI:
             cmd.extend(["--gpu", gpu, "--gpu-audio", gpu_audio])
 
         if storage == "file":
-            default_disk = str(Path.home() / ".local" / "share" / "janus" / "vms" / f"{name}.qcow2")
+            default_disk = str(Path.home() / "Janus VMs" / name / f"{name}.qcow2")
             disk_path = self.prompt(self.t("input_disk_path"), default_disk)
             disk_size = self.prompt(self.t("input_disk_size"), "120G")
             if disk_path:
@@ -682,7 +687,12 @@ class JanusTUI:
         name = self.ask_vm_name("vm_action_start")
         if not name:
             return
-        self.run_shell_command(["bash", str(BIN_DIR / "janus-vm.sh"), "start", "--name", name])
+        ok = self.run_shell_command(["bash", str(BIN_DIR / "janus-vm.sh"), "start", "--name", name])
+        if ok and shutil.which("virt-viewer"):
+            self.run_shell_command(
+                ["virt-viewer", "--connect", "qemu:///system", "--wait", name],
+                pause=False,
+            )
 
     def action_vm_stop(self) -> None:
         name = self.ask_vm_name("vm_action_stop")

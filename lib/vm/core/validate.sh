@@ -17,8 +17,19 @@ janus_vm_validate_common() {
     [[ "$JANUS_VM_NAME" =~ ^[A-Za-z0-9._-]+$ ]] || janus_vm_die "VM name contains invalid characters: $JANUS_VM_NAME"
 }
 
+# Resolve per-VM directory paths once the VM name is known.
+janus_vm_resolve_vm_dirs() {
+    local vm_dir="$JANUS_VM_HOME_DIR/$JANUS_VM_NAME"
+
+    JANUS_VM_DEF_DIR="$vm_dir"
+    JANUS_VM_NVRAM_DIR="$vm_dir"
+    JANUS_VM_UNATTEND_DIR="$vm_dir/unattend"
+    JANUS_VM_DEFAULT_DISK_DIR="$vm_dir"
+}
+
 # Validate create-specific options and derive defaults.
 janus_vm_validate_create() {
+    janus_vm_resolve_vm_dirs
     case "$JANUS_VM_MODE" in
         base|passthrough)
             ;;
@@ -137,14 +148,21 @@ janus_vm_validate_non_create() {
 # Ensure required directories exist for the selected operation.
 janus_vm_prepare_layout() {
     local dirs=("$JANUS_VM_DEF_DIR" "$JANUS_VM_NVRAM_DIR")
+    local real_user="${SUDO_USER:-$USER}"
 
     if [ "$JANUS_VM_STORAGE_MODE" = "file" ]; then
         dirs+=("$(dirname "$JANUS_VM_DISK_PATH")")
     fi
 
     if [ "$JANUS_VM_UNATTENDED_ENABLED" -eq 1 ]; then
-        dirs+=("$JANUS_VM_UNATTEND_DIR/$JANUS_VM_NAME")
+        dirs+=("$JANUS_VM_UNATTEND_DIR")
     fi
 
     mkdir -p "${dirs[@]}" || janus_vm_die "Unable to create VM directories."
+
+    # Ensure the VM directory tree belongs to the real user so they
+    # can manage files without sudo.
+    if [ -n "${SUDO_USER:-}" ] && [ -d "$JANUS_VM_HOME_DIR" ]; then
+        chown -R "${real_user}:${real_user}" "$JANUS_VM_HOME_DIR" 2>/dev/null || true
+    fi
 }

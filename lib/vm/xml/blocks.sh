@@ -18,7 +18,7 @@ janus_vm_build_primary_disk_block() {
     <disk type='block' device='disk'>
       <driver name='qemu' type='raw' cache='none' io='native'/>
       <source dev='__DISK_PATH__'/>
-      <target dev='vda' bus='virtio'/>
+      <target dev='sdc' bus='sata'/>
       <boot order='1'/>
     </disk>
 EOF_BLOCK
@@ -29,7 +29,7 @@ EOF_BLOCK
     <disk type='file' device='disk'>
       <driver name='qemu' type='qcow2' cache='none' io='native'/>
       <source file='__DISK_PATH__'/>
-      <target dev='vda' bus='virtio'/>
+      <target dev='sdc' bus='sata'/>
       <boot order='1'/>
     </disk>
 EOF_BLOCK
@@ -48,6 +48,7 @@ janus_vm_build_iso_block() {
       <source file='__ISO_PATH__'/>
       <target dev='sda' bus='sata'/>
       <readonly/>
+      <boot order='2'/>
     </disk>
 EOF_BLOCK
 }
